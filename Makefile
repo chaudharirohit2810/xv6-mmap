@@ -21,6 +21,7 @@ OBJS = \
 	swtch.o\
 	syscall.o\
 	sysfile.o\
+	sys_mmap.o\
 	sysproc.o\
 	trapasm.o\
 	trap.o\
@@ -180,7 +181,7 @@ UPROGS=\
 	_stressfs\
 	_usertests\
 	_wc\
-	_mmap\
+	_mmap_test\
 	_zombie\
 
 fs.img: mkfs README $(UPROGS)
@@ -251,7 +252,7 @@ qemu-nox-gdb: fs.img xv6.img .gdbinit
 EXTRA=\
 	mkfs.c ulib.c user.h cat.c echo.c forktest.c grep.c kill.c\
 	ln.c ls.c mkdir.c rm.c stressfs.c usertests.c wc.c zombie.c\
-	printf.c umalloc.c mmap.c\
+	printf.c umalloc.c mmap_test.c\
 	README dot-bochsrc *.pl toc.* runoff runoff1 runoff.list\
 	.gdbinit.tmpl gdbutil\
 
