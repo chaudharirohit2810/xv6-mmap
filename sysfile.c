@@ -442,3 +442,41 @@ sys_pipe(void)
   fd[1] = fd1;
   return 0;
 }
+
+
+// implementation of mmap system call 
+int sys_mmap(void) {
+
+	// <!!------------------------- Arguements of system call -----------------------!!>
+	char* addr;
+	int size, protection, flags, offset;
+	int fd;
+	struct file *f; 
+	
+
+	// <!!----------------------------Getting the arguements-------------------------!!>
+	// Integer arguements
+	if(argint(1, &size) < 0 || argint(2, &protection) < 0 || argint(3, &flags) < 0 || argint(5, &offset) < 0) {
+		return -1;
+	}
+	// Pointer arguement
+	if(argptr(0, &addr, size) < 0) {
+		return -1;
+	}
+	// File descriptor arguement
+	if(argfd(4, &fd, &f) < 0) {
+		return -1;
+	}
+
+	
+	// <!!-------------------------------- Debugging-----------------------------------------!!>
+	int development = 1;
+	if(development == 1) {
+		cprintf("\nArguements are:\n");
+		cprintf("Size:%d  Protection:%d  Flags:%d  Offset:%d\n", size, protection, flags, offset);
+		cprintf("Pointer address: %p\n\n", addr);
+	}
+
+	return 0;
+}
+
