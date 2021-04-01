@@ -18,3 +18,7 @@ void* my_mmap(int addr, struct file* f, int size, int offset, int flags, int pro
 	return (void*)0;
 }
 
+int my_munmap(int addr, int size) {
+	cprintf("This is munmap system call\n");
+	return 0;
+}

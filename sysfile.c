@@ -449,8 +449,7 @@ sys_pipe(void)
 int sys_mmap(void) {
 
 	// <!!------------------------- Arguements of system call -----------------------!!>
-	int addr;
-	int size, protection, flags, offset;
+	int addr, size, protection, flags, offset;
 	int fd;
 	struct file *f; 
 	
@@ -471,7 +470,7 @@ int sys_mmap(void) {
 
 	
 	// <!!-------------------------------- Debugging-----------------------------------------!!>
-	int development = 1;
+	int development = 0;
 	if(development == 1) {
 		cprintf("\nArguements are:\n");
 		cprintf("Size:%d  Protection:%d  Flags:%d  Offset:%d\n", size, protection, flags, offset);
@@ -481,3 +480,15 @@ int sys_mmap(void) {
 	return (int)my_mmap(addr, f, size, offset, flags, protection);
 }
 
+
+
+// munmap system call
+int sys_munmap(void) {
+	int addr, size;
+	// <!!---------------------------------------Getting the arguements-------------------------------!!>
+	if(argint(0, &addr) < 0 || argint(1, &size)) {
+		return -1;
+	}
+	
+	return my_munmap(addr, size);
+}
