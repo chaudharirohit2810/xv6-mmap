@@ -448,7 +448,7 @@ sys_pipe(void)
 int sys_mmap(void) {
 
 	// <!!------------------------- Arguements of system call -----------------------!!>
-	char* addr;
+	int addr;
 	int size, protection, flags, offset;
 	int fd;
 	struct file *f; 
@@ -459,8 +459,8 @@ int sys_mmap(void) {
 	if(argint(1, &size) < 0 || argint(2, &protection) < 0 || argint(3, &flags) < 0 || argint(5, &offset) < 0) {
 		return -1;
 	}
-	// Pointer arguement
-	if(argptr(0, &addr, size) < 0) {
+	// address arguement
+	if(argint(0, &addr) < 0) {
 		return -1;
 	}
 	// File descriptor arguement

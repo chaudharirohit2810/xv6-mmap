@@ -25,7 +25,7 @@ int sleep(int);
 int uptime(void);
 
 // My system call
-int mmap(void* addr, int size, int protection, int flags, int fd, int offset);
+void* mmap(void* addr, int size, int protection, int flags, int fd, int offset);
 
 // ulib.c
 int stat(const char*, struct stat*);
