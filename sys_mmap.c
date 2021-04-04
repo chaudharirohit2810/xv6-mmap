@@ -14,7 +14,7 @@
 
 // Main mmap system call
 void* my_mmap(int addr, struct file* f, int size, int offset, int flags, int protection) {	
-	uint tempaddr = 0x60000000 + offset * 2;
+	uint tempaddr = MMAPBASE + offset * 2;
 	tempaddr = PGROUNDUP(tempaddr);
 	struct proc* p = myproc(); // Current running process
 	// Get the page from page cache
