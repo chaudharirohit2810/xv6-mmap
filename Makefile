@@ -185,8 +185,8 @@ UPROGS=\
 	_mmap_test\
 	_zombie\
 
-fs.img: mkfs README $(UPROGS)
-	./mkfs fs.img README $(UPROGS)
+fs.img: mkfs README PASSWD $(UPROGS)
+	./mkfs fs.img README PASSWD $(UPROGS)
 
 -include *.d
 

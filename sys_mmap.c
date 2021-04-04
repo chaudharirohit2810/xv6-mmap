@@ -19,7 +19,6 @@ void* my_mmap(int addr, struct file* f, int size, int offset, int flags, int pro
 	struct proc* p = myproc(); // Current running process
 	// Get the page from page cache
 	char* page = getPage(f->ip, offset, f->ip->inum); 
-	cprintf("%s\n", page);
 	if(page == (char*)-1) { // Check if getPage failed
 			return (void*)-1;
 	}
