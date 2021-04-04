@@ -13,21 +13,20 @@
 #include "mmap.h"
 
 // Function to map the private page to process
-char* mapPrivatePage(char* page, struct proc* p, uint tempaddr) {
+char* mapPrivatePage(char* page, struct proc* p, uint mmapaddr) {
 	char* temp = kalloc(); // Allocate a temporary page
 	memmove(temp, page, PGSIZE); // Copy the content from page cache to allocated page	
 	// Map the page to user process
-	if(mappages(p->pgdir, (void*)tempaddr, PGSIZE, V2P(temp), PTE_P|PTE_U) < 0) {
+	if(mappages(p->pgdir, (void*)mmapaddr, PGSIZE, V2P(temp), PTE_P|PTE_U) < 0) {
 			return (char*)-1;
 	}
 	return temp;
 }
 
-
 // Main function of mmap system call
 void* my_mmap(int addr, struct file* f, int size, int offset, int flags, int protection) {	
-	uint tempaddr = MMAPBASE + offset * 2;
-	tempaddr = PGROUNDUP(tempaddr);
+	uint mmapaddr = MMAPBASE + offset * 2;
+	mmapaddr = PGROUNDUP(mmapaddr);
 	struct proc* p = myproc(); // Current running process
 
 	if(!(flags & MAP_ANONYMOUS)) { // File backed mapping
@@ -38,7 +37,7 @@ void* my_mmap(int addr, struct file* f, int size, int offset, int flags, int pro
 		}
 	
 		if((flags & MAP_PRIVATE)) {	// Private file-backed Mapping	
-			if(mapPrivatePage(page, p, tempaddr) == (char*)-1) {
+			if(mapPrivatePage(page, p, mmapaddr) == (char*)-1) {
 				return (void*)-1;
 			}
 		}else { // Shared file-backed mapping
@@ -46,11 +45,11 @@ void* my_mmap(int addr, struct file* f, int size, int offset, int flags, int pro
 			return (void*)-1;
 		}
 	}else { // Anonymous mapping	
-		cprintf("Anonymous not working right now!!\n");
+		cprintf("Anonymous mapping not working right now!!\n");
 		return (void*)-1;
 	}
 
-	return (void*)tempaddr; 
+	return (void*)mmapaddr; 
 }
 
 // Main function of munmap system call

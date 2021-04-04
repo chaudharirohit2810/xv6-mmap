@@ -3,12 +3,14 @@
 #include "defs.h"
 #include "mmu.h"
 
-struct pagecache pages[30];
+// Page cache structure
+// TODO: Later think of something like hash map and linked list 
+struct pagecache pages[NPAGECACHE];
 
 // To intialize the page cache
 void 
 pagecacheinit(void) {
-		for(int i = 0; i < 30; i++) {
+		for(int i = 0; i < NPAGECACHE; i++) {
 				pages[i].page = kalloc();
 				memset(pages[i].page, 0, PGSIZE);
 		}
@@ -17,7 +19,7 @@ pagecacheinit(void) {
 
 // To find page in page cache
 static char* findPage(uint inum, int offset) {
-		for(int i = 0; i < 30; i++) {
+		for(int i = 0; i < NPAGECACHE; i++) {
 				if(pages[i].inode_number == inum && pages[i].offset == offset) {
 						cprintf("\n\nPage found returning: %p\n\n", pages[i].page);
 						return pages[i].page;
@@ -40,13 +42,13 @@ char* getPage(struct inode* ip, int offset, int inum) {
 
 	// If the page is not present then use one which has refcount as 0
 	cprintf("\n\nPage not present, use one from page cache\n\n\n");
-	for(i = 0; i < 30; i++) {
+	for(i = 0; i < NPAGECACHE; i++) {
 			if(pages[i].refCount == 0) {
 					break;
 			}
 	}	
 	// free page not available in cache
-	if(i == 30) {
+	if(i == NPAGECACHE) {
 			cprintf("getPage Error: No page available\n");
 			return (char*)-1;
 	}
