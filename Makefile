@@ -1,5 +1,6 @@
 OBJS = \
 	bio.o\
+	pagecache.o\
 	console.o\
 	exec.o\
 	file.o\
