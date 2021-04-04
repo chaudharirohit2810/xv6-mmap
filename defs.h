@@ -92,7 +92,8 @@ extern int      ismp;
 void            mpinit(void);
 
 // pagecache.c
-void            pagecacheinit(void);
+void 						pagecacheinit(void);
+char* 					getPage(struct inode*, int, int);
 
 // picirq.c
 void            picenable(int);
@@ -188,6 +189,7 @@ void            switchuvm(struct proc*);
 void            switchkvm(void);
 int             copyout(pde_t*, uint, void*, uint);
 void            clearpteu(pde_t *pgdir, char *uva);
+int 						mappages(pde_t *, void *, uint, uint, int);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))
