@@ -13,14 +13,28 @@
 #include "mmap.h"
 
 // Function to map the private page to process
-char* mapPrivatePage(char* page, struct proc* p, uint mmapaddr) {
+int mapPrivatePage(char* page, struct proc* p, uint mmapaddr, int protection) {
 	char* temp = kalloc(); // Allocate a temporary page
 	memmove(temp, page, PGSIZE); // Copy the content from page cache to allocated page	
 	// Map the page to user process
-	if(mappages(p->pgdir, (void*)mmapaddr, PGSIZE, V2P(temp), PTE_P|PTE_U) < 0) {
-			return (char*)-1;
+	if(mappages(p->pgdir, (void*)mmapaddr, PGSIZE, V2P(temp), PTE_U|protection) < 0) {
+			return -1;
 	}
-	return temp;
+	return PGSIZE;
+}
+
+// Function to map anonymous private page
+int mapAnonPage(struct proc* p, uint mmapaddr, int protection, int size) {
+		int i = 0;
+		for(;i < size; i += PGSIZE) {
+			char* mapped_page = kalloc();
+			memset(mapped_page, 0, PGSIZE);
+			if(mappages(p->pgdir, (void*)mmapaddr + i, PGSIZE, V2P(mapped_page), PTE_U|protection) < 0) {
+				cprintf("Map Anon: mappages failed\n");
+				return -1;
+			}
+		}
+		return size;
 }
 
 // Main function of mmap system call
@@ -37,7 +51,7 @@ void* my_mmap(int addr, struct file* f, int size, int offset, int flags, int pro
 		}
 	
 		if((flags & MAP_PRIVATE)) {	// Private file-backed Mapping	
-			if(mapPrivatePage(page, p, mmapaddr) == (char*)-1) {
+			if(mapPrivatePage(page, p, mmapaddr, protection) == -1) {
 				return (void*)-1;
 			}
 		}else { // Shared file-backed mapping
@@ -45,8 +59,9 @@ void* my_mmap(int addr, struct file* f, int size, int offset, int flags, int pro
 			return (void*)-1;
 		}
 	}else { // Anonymous mapping	
-		cprintf("Anonymous mapping not working right now!!\n");
-		return (void*)-1;
+		if(mapAnonPage(p, mmapaddr, protection, size) < 0) {
+				return (void*)-1;
+		}
 	}
 
 	return (void*)mmapaddr; 
