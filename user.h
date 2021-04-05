@@ -26,7 +26,7 @@ int uptime(void);
 
 // My system call
 void* mmap(void* addr, int size, int protection, int flags, int fd, int offset);
-int munmap(int addr, int size);
+int munmap(void* addr, int size);
 
 // ulib.c
 int stat(const char*, struct stat*);

@@ -20,7 +20,8 @@ int main(int args, char* argv[]) {
 			ret[i] = 'a';
 	}
 	printf(1, "%s\n", ret);
-	munmap(10, size);
+	int res = munmap((void*)ret, size);
+	printf(1, "Munmap return value: %d\n", res);
 	exit();
 }
 
