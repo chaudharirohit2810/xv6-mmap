@@ -109,8 +109,6 @@ void* my_mmap(int addr, struct file* f, int size, int offset, int flags, int pro
 	if(i == 30) {
 			return (void*)-1;
 	}
-
-//	cprintf("mymmap: Allocated index %d entry in array\n", i);
 	
 	if(!(flags & MAP_ANONYMOUS)) { // File backed mapping
 		// Private file-backed Mapping	
@@ -164,7 +162,6 @@ int my_munmap(uint addr, int size) {
 		if(p->mmaps[i].virt_addr == addr) {
 			cprintf("\n--------- Page Found for unmapping -------------\n");
 			total_size = p->mmaps[i].size;
-			zero_mmap_region_struct(&p->mmaps[i]);
 			break;
 		}
 	}
@@ -191,7 +188,10 @@ int my_munmap(uint addr, int size) {
 		char* v = P2V(pa);
 		kfree(v);
 		*pte = 0;
+		freePage(p->mmaps[i].f->ip->inum, p->mmaps[i].offset + currsize);
 	}
+
+	zero_mmap_region_struct(&p->mmaps[i]);
 
 	return 0;
 }

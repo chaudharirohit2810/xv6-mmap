@@ -1,4 +1,4 @@
-cscope 15 $HOME/Projects/xv6/xv6-mmap               0000361776
+cscope 15 $HOME/Projects/xv6/xv6-mmap               0000364879
 	@asm.h
 
 5 
@@ -2969,7 +2969,15 @@ pde_t
 uöt
 , uint, );
 
-195 
+193 
+±e_t
+ * 
+	`wÆkpgdú
+(
+pde_t
+ *, const *, );
+
+197 
 	#NELEM
 (
 x
@@ -13996,11 +14004,11 @@ MAP_ANONYMOUS
 
 7 
 size
- = 10240;
+ = 5000;
 
-8 * 
+8 * 
 ªt
- = (*Ë
+ = (*Ë
 	`mm≠
 ((*)0, 
 size
@@ -14028,31 +14036,49 @@ MAP_ANONYMOUS
 i
  = 0; i < 
 size
-; i++) {
+ / (); i++) {
 
 14 
 ªt
 [
 i
-] = 'a';
+] = i;
 
-16 
-	`¥ötf
-(1, "%s\n", 
-ªt
-);
+16 
+i
+ = 0; i < 
+size
+ / (); i++) {
 
 17 
+	`¥ötf
+(1, "%d\t", 
+ªt
+[
+i
+]);
+
+19 
+ªs
+ = 
 	`munm≠
-(10, 
+((*)
+ªt
+, 
 size
 );
 
-18 
+20 
+	`¥ötf
+(1, "munm≠Ñëu∫ vÆue: %d\n", 
+ªs
+);
+
+22 
 	`exô
 ();
 
-19 
+23 
 	}
 }
 
@@ -14084,13 +14110,9 @@ size
 
 7 
 size
- = 1024;
+ = 1096;
 
-8 
-d©a
-[1024];
-
-9 
+8 
 fd
  = 
 	`›í
@@ -14100,25 +14122,23 @@ fd
 O_RDONLY
 );
 
-10 if(
+9 if(
 fd
  == -1) {
 
-11 
+10 
 	`¥ötf
 (1, "File doesÇotÉxist\n");
 
-12 
+11 
 	`exô
 ();
 
-14 * 
+13 * 
 ªt
  = (*Ë
 	`mm≠
-((*)
-d©a
-, 
+((*)0, 
 size
 , 
 PROT_READ
@@ -14128,47 +14148,39 @@ PROT_WRITE
 MAP_PRIVATE
 , 
 fd
-, 0);
+, 100);
 
-15 if(
+14 if(
 ªt
  == (*)-1) {
 
-16 
+15 
 	`¥ötf
 (1, "Mmap failed!!\n");
 
-17 
+16 
 	`exô
 ();
 
-19 
-i
- = 0; i < 10; i++) {
-
-20 
-ªt
-[
-i
-] = 'a';
-
-22 
+18 
 	`¥ötf
 (1, "%s\n", 
 ªt
 );
 
-23 
+28 
 	`munm≠
-(10, 
+((*)
+ªt
+, 
 size
 );
 
-24 
+30 
 	`exô
 ();
 
-25 
+31 
 	}
 }
 
@@ -15778,7 +15790,9 @@ PGSIZE
 	}
 }
 
-21 * 
+21 
+∑geˇche
+* 
 	$födPage
 (
 uöt
@@ -15808,7 +15822,7 @@ off£t
 
 24 
 	`˝rötf
-("\n\nPagêfoundÑëu∫ög: %p\n\n", 
+("foundÑëu∫ög: %p\n", 
 ∑ges
 [
 i
@@ -15816,13 +15830,11 @@ i
 ∑ge
 );
 
-25  
+25  &
 ∑ges
 [
 i
-].
-∑ge
-;
+];
 
 29 
 	}
@@ -15850,7 +15862,9 @@ off£t
 PGSIZE
 ;
 
-38 * 
+38 
+∑geˇche
+* 
 ªs
  = 
 	`födPage
@@ -15862,15 +15876,17 @@ off£t
 
 39 if(
 ªs
- != (*)-1) {
+) {
 
 40  
 ªs
+->
+∑ge
 ;
 
 44 
 	`˝rötf
-("\n\nPageÇotÖresent, use one fromÖage cache\n\n\n");
+("notÖresent, use one fromÖage cache\n");
 
 45 
 i
@@ -15924,7 +15940,7 @@ i
 off£t
 , 
 PGSIZE
- - 1);
+);
 
 59 if(
 n
@@ -15969,6 +15985,50 @@ i
 ;
 
 69 
+	}
+}
+
+71 
+	$‰ìPage
+(
+öum
+, 
+off£t
+) {
+
+72 
+	`˝rötf
+("FreeingÅheÖage\n");
+
+73 
+off£t
+ -off£à% 
+PGSIZE
+;
+
+74 
+∑geˇche
+* 
+ªs
+ = 
+	`födPage
+(
+öum
+, 
+off£t
+);
+
+75 if(!
+ªs
+) {
+
+78 
+ªs
+->
+ªfCou¡
+ -= 1;
+
+80 
 	}
 }
 
@@ -18960,7 +19020,45 @@ uöt
 	meù
 ;
 
-35 
+36 
+	smm≠_ªgi⁄
+ {
+
+37 
+uöt
+ 
+	mvút_addr
+;
+
+38 
+uöt
+ 
+	msize
+;
+
+39 
+	mÊags
+;
+
+40 
+	missh¨ed
+;
+
+41 
+	m¥Ÿe˘i⁄
+;
+
+42 
+fûe
+* 
+	mf
+;
+
+43 
+	moff£t
+;
+
+46 
 	e¥oc°©e
  { 
 	mUNUSED
@@ -18976,63 +19074,63 @@ uöt
 	mZOMBIE
  };
 
-38 
+49 
 	s¥oc
  {
 
-39 
+50 
 uöt
  
 	msz
 ;
 
-40 
+51 
 pde_t
 * 
 	mpgdú
 ;
 
-41 *
+52 *
 	mk°ack
 ;
 
-42 
+53 
 ¥oc°©e
  
 	m°©e
 ;
 
-43 
+54 
 	mpid
 ;
 
-44 
+55 
 ¥oc
  *
 	m∑ª¡
 ;
 
-45 
+56 
 å≠‰ame
  *
 	mtf
 ;
 
-46 
+57 
 c⁄ãxt
  *
 	mc⁄ãxt
 ;
 
-47 *
+58 *
 	mch™
 ;
 
-48 
+59 
 	mkûÀd
 ;
 
-49 
+60 
 fûe
  *
 	mofûe
@@ -19040,15 +19138,21 @@ fûe
 NOFILE
 ];
 
-50 
+61 
 öode
  *
 	mcwd
 ;
 
-51 
+62 
 	m«me
 [16];
+
+63 
+mm≠_ªgi⁄
+ 
+	mmm≠s
+[30];
 
 	@rm.c
 
@@ -22350,39 +22454,199 @@ n
 	~"mm≠.h
 "
 
-16 
-	$m≠Priv©ePage
-(* 
-∑ge
-, 
+16 
+uöt
+ 
+	$födMm≠Addr
+(
 ¥oc
 * 
 p
+) {
+
+17 
+uöt
+ 
+max_addr
+ = 
+MMAPBASE
+;
+
+19 
+i
+ = 0; i < 30; i++) {
+
+20 if(
+p
+->
+mm≠s
+[
+i
+].
+vút_addr
+ +Ö->mm≠s[i].
+size
+ > 
+max_addr
+) {
+
+21 
+max_addr
+ = 
+p
+->
+mm≠s
+[
+i
+].
+vút_addr
+ +Ö->mm≠s[i].
+size
+;
+
+24  
+	`PGROUNDUP
+(
+max_addr
+);
+
+25 
+	}
+}
+
+32 
+	$m≠Priv©ePage
+(
+fûe
+* 
+f
 , 
 uöt
  
 mm≠addr
 , 
 ¥Ÿe˘i⁄
+, 
+off£t
+, 
+size
 ) {
 
-17 * 
+33 * 
 ãmp
  = 
 	`kÆloc
 ();
 
-18 
-	`memmove
+34 if(!
+ãmp
+) {
+
+35 
+	`˝rötf
+("mapPrivatePage Error: kalloc failed, free MemoryÇotávailable\n");
+
+38 
+	`mem£t
 (
 ãmp
-, 
-∑ge
-, 
+, 0, 
 PGSIZE
 );
 
-20 if(
+39 
+ãmpsize
+ = 
+size
+;
+
+40 
+i
+ = 0;
+
+43 
+ãmpsize
+ != 0) {
+
+45 * 
+∑ge
+ = 
+	`gëPage
+(
+f
+->
+ù
+, 
+off£t
+ + 
+PGSIZE
+ * 
+i
+, f->ù->
+öum
+);
+
+46 if(
+∑ge
+ == (*)-1) {
+
+49 
+cuºoff
+ = 
+off£t
+ % 
+PGSIZE
+;
+
+50 
+cuºsize
+ = 
+PGSIZE
+ - 
+cuºoff
+ > 
+ãmpsize
+ ?Åempsize: PGSIZE - curroff;
+
+51 
+	`memmove
+(
+ãmp
+ + 
+size
+ - 
+ãmpsize
+, 
+∑ge
+ + 
+cuºoff
+, 
+cuºsize
+);
+
+52 
+ãmpsize
+ -
+cuºsize
+;
+
+53 
+off£t
+ = 0;
+
+54 
+i
+ += 1;
+
+57 
+¥oc
+* 
+p
+ = 
+	`my¥oc
+();
+
+59 if(
 	`m≠∑ges
 (
 p
@@ -22402,15 +22666,89 @@ PTE_U
 ¥Ÿe˘i⁄
 ) < 0) {
 
-23  
-PGSIZE
+63  
+size
 ;
 
-24 
+64 
 	}
 }
 
-27 
+66 
+	$m≠Priv©eMaö
+(
+fûe
+* 
+f
+, 
+uöt
+ 
+mm≠addr
+, 
+¥Ÿe˘i⁄
+, 
+off£t
+, 
+size
+) {
+
+67 
+cuºsize
+ = 0;
+
+68 
+maösize
+ = 
+size
+;
+
+69 ;
+cuºsize
+ < 
+maösize
+; cuºsizê+
+PGSIZE
+) {
+
+70 
+m≠size
+ = 
+PGSIZE
+ > 
+size
+ ? size: PGSIZE;
+
+71 if(
+	`m≠Priv©ePage
+(
+f
+, 
+mm≠addr
+ + 
+cuºsize
+, 
+¥Ÿe˘i⁄
+, 
+off£t
+ + cuºsize, 
+m≠size
+) < 0) {
+
+74 
+size
+ -
+PGSIZE
+;
+
+76  
+size
+;
+
+77 
+	}
+}
+
+83 
 	$m≠An⁄Page
 (
 ¥oc
@@ -22426,11 +22764,11 @@ mm≠addr
 size
 ) {
 
-28 
+84 
 i
  = 0;
 
-29 ;
+85 ;
 i
  < 
 size
@@ -22438,13 +22776,13 @@ size
 PGSIZE
 ) {
 
-30 * 
+86 * 
 m≠≥d_∑ge
  = 
 	`kÆloc
 ();
 
-31 
+87 
 	`mem£t
 (
 m≠≥d_∑ge
@@ -22452,7 +22790,7 @@ m≠≥d_∑ge
 PGSIZE
 );
 
-32 if(
+88 if(
 	`m≠∑ges
 (
 p
@@ -22474,19 +22812,19 @@ PTE_U
 ¥Ÿe˘i⁄
 ) < 0) {
 
-33 
+89 
 	`˝rötf
 ("Map Anon: mappages failed\n");
 
-37  
+93  
 size
 ;
 
-38 
+94 
 	}
 }
 
-41 * 
+97 * 
 	$my_mm≠
 (
 addr
@@ -22504,23 +22842,7 @@ off£t
 ¥Ÿe˘i⁄
 ) {
 
-42 
-uöt
- 
-mm≠addr
- = 
-MMAPBASE
- + 
-off£t
- * 2;
-
-43 
-mm≠addr
- = 
-	`PGROUNDUP
-(mmapaddr);
-
-44 
+98 
 ¥oc
 * 
 p
@@ -22528,53 +22850,69 @@ p
 	`my¥oc
 ();
 
-46 if(!(
+99 
+uöt
+ 
+mm≠addr
+ = 
+	`födMm≠Addr
+(
+p
+);
+
+102 
+i
+ = 0;
+
+103 ;
+i
+ < 30; i++) {
+
+104 if(
+p
+->
+mm≠s
+[
+i
+].
+vút_addr
+ == 0) {
+
+109 if(
+i
+ == 30) {
+
+113 if(!(
 Êags
  & 
 MAP_ANONYMOUS
 )) {
 
-48 * 
-∑ge
- = 
-	`gëPage
-(
-f
-->
-ù
-, 
-off£t
-, f->ù->
-öum
-);
-
-49 if(
-∑ge
- == (*)-1) {
-
-53 if((
+115 if((
 Êags
  & 
 MAP_PRIVATE
 )) {
 
-54 if(
-	`m≠Priv©ePage
+116 if(
+	`m≠Priv©eMaö
 (
-∑ge
-, 
-p
+f
 , 
 mm≠addr
 , 
 ¥Ÿe˘i⁄
+, 
+off£t
+, 
+size
 ) == -1) {
 
-58 
+120 
 	`˝rötf
 ("Shared file mappingÇot done!!\n");
 
-62 if(
+124 if(
 	`m≠An⁄Page
 (
 p
@@ -22586,27 +22924,325 @@ mm≠addr
 size
 ) < 0) {
 
-67  (*)
+130 
+p
+->
+mm≠s
+[
+i
+].
+vút_addr
+ = 
 mm≠addr
 ;
 
-68 
+131 
+p
+->
+mm≠s
+[
+i
+].
+size
+ = size;
+
+132 
+p
+->
+mm≠s
+[
+i
+].
+Êags
+ = flags;
+
+133 
+p
+->
+mm≠s
+[
+i
+].
+¥Ÿe˘i⁄
+ =Örotection;
+
+134 
+p
+->
+mm≠s
+[
+i
+].
+off£t
+ = offset;
+
+135 
+p
+->
+mm≠s
+[
+i
+].
+f
+ = f;
+
+137  (*)
+mm≠addr
+;
+
+138 
 	}
 }
 
-71 
+141 
+	$zîo_mm≠_ªgi⁄_°ru˘
+(
+mm≠_ªgi⁄
+* 
+mr
+) {
+
+142 
+mr
+->
+vút_addr
+ = 0;
+
+143 
+mr
+->
+size
+ = 0;
+
+144 
+mr
+->
+Êags
+ = 0;
+
+145 
+mr
+->
+¥Ÿe˘i⁄
+ = 0;
+
+146 
+mr
+->
+f
+ = 0;
+
+147 
+mr
+->
+off£t
+ = 0;
+
+148 
+mr
+->
+Êags
+ = 0;
+
+149 
+mr
+->
+issh¨ed
+ = -1;
+
+150 
+	}
+}
+
+153 
 	$my_munm≠
-(
+(
+uöt
+ 
 addr
 , 
 size
 ) {
 
-72 
-	`˝rötf
-("This is munmap system call\n");
+155 
+¥oc
+* 
+p
+ = 
+	`my¥oc
+();
 
-74 
+156 
+±e_t
+ *
+±e
+;
+
+157 
+addr
+ = 
+	`PGROUNDUP
+(addr);
+
+158 
+i
+ = 0;
+
+159 
+tŸÆ_size
+ = 0;
+
+161 ; 
+i
+ < 30; i++) {
+
+162 if(
+p
+->
+mm≠s
+[
+i
+].
+vút_addr
+ =
+addr
+) {
+
+163 
+	`˝rötf
+("\n--------- Page Found for unmapping -------------\n");
+
+164 
+tŸÆ_size
+ = 
+p
+->
+mm≠s
+[
+i
+].
+size
+;
+
+169 if(
+i
+ =30 || 
+tŸÆ_size
+ == 0) {
+
+170 
+	`˝rötf
+("unmapPage Error: AddrÇotÖresent in mappings\n\n");
+
+175 
+cuºsize
+ = 0;
+
+176 ; 
+cuºsize
+ < 
+tŸÆ_size
+; cuºsizê+
+PGSIZE
+) {
+
+177 
+uöt
+ 
+ãm∑ddr
+ = 
+addr
+ + 
+cuºsize
+;
+
+178 
+±e
+ = 
+	`wÆkpgdú
+(
+p
+->
+pgdú
+, (*)
+ãm∑ddr
+, 0);
+
+179 if(!
+±e
+) {
+
+180 
+	`˝rötf
+("unmapPage Error: Pte doesÇotÉxist\n\n");
+
+183 
+uöt
+ 
+∑
+ = 
+	`PTE_ADDR
+(*
+±e
+);
+
+184 if(
+∑
+ == 0) {
+
+185 
+	`˝rötf
+("unmapPage Error: PhysicalÖageÇot storedátÖte\n\n");
+
+188 * 
+v
+ = 
+	`P2V
+(
+∑
+);
+
+189 
+	`k‰ì
+(
+v
+);
+
+190 *
+±e
+ = 0;
+
+191 
+	`‰ìPage
+(
+p
+->
+mm≠s
+[
+i
+].
+f
+->
+ù
+->
+öum
+,Ö->mm≠s[i].
+off£t
+ + 
+cuºsize
+);
+
+194 
+	`zîo_mm≠_ªgi⁄_°ru˘
+(&
+p
+->
+mm≠s
+[
+i
+]);
+
+197 
 	}
 }
 
@@ -25910,6 +26546,12 @@ uöt
 	tpde_t
 ;
 
+5 
+uöt
+ 
+	t±e_t
+;
+
 	@uart.c
 
 3 
@@ -27054,7 +27696,7 @@ off£t
 
 29 
 	`munm≠
-(
+(* 
 addr
 , 
 size
@@ -33254,7 +33896,7 @@ gdt
 	}
 }
 
-35 
+35 
 ±e_t
  *
 

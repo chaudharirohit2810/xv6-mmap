@@ -18,14 +18,14 @@ pagecacheinit(void) {
 }
 
 // To find page in page cache
-static char* findPage(uint inum, int offset) {
+static struct pagecache* findPage(uint inum, int offset) {
 		for(int i = 0; i < NPAGECACHE; i++) {
 				if(pages[i].inode_number == inum && pages[i].offset == offset) {
 						cprintf("found returning: %p\n", pages[i].page);
-						return pages[i].page;
+						return &pages[i];
 				}
 		}
-		return (char*)-1;
+		return 0;
 }
 
 
@@ -35,9 +35,9 @@ char* getPage(struct inode* ip, int offset, int inum) {
 	offset -= offset % PGSIZE;
 
 	// Find the page in page cache
-	char* res = findPage(inum, offset);
-	if(res != (char*)-1) {
-			return res;
+	struct pagecache* res = findPage(inum, offset);
+	if(res) {
+			return res->page;
 	}
 
 	// If the page is not present then use one which has refcount as 0
@@ -66,4 +66,16 @@ char* getPage(struct inode* ip, int offset, int inum) {
 	pages[i].refCount++;	
 
 	return pages[i].page;
+}
+
+// Decrease the reference count when the page is unmapped
+int freePage(int inum, int offset) {
+	cprintf("Decreasing the reference count\n");
+	offset -= offset % PGSIZE;
+	struct pagecache* res = findPage(inum, offset);
+	if(!res) {
+		return -1;
+	}
+	res->refCount -= 1;
+	return 0;
 }

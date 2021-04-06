@@ -94,6 +94,7 @@ void            mpinit(void);
 // pagecache.c
 void 						pagecacheinit(void);
 char* 					getPage(struct inode*, int, int);
+int 						freePage(int , int );
 
 // picirq.c
 void            picenable(int);
