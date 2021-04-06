@@ -41,7 +41,7 @@ char* getPage(struct inode* ip, int offset, int inum) {
 	}
 
 	// If the page is not present then use one which has refcount as 0
-//	cprintf("not present, use one from page cache\n");
+	cprintf("not present, use one from page cache\n");
 	for(i = 0; i < NPAGECACHE; i++) {
 			if(pages[i].refCount == 0) {
 					break;

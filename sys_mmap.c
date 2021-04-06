@@ -13,7 +13,7 @@
 #include "mmap.h"
 
 // To find the mmap region virtual address
-uint findMmapAddr(struct proc* p) {
+static uint findMmapAddr(struct proc* p) {
 		uint max_addr = MMAPBASE;
 		// To find the max allocated virtual address
 		for(int i = 0; i < 30; i++) {
@@ -24,12 +24,22 @@ uint findMmapAddr(struct proc* p) {
 		return PGROUNDUP(max_addr); // Return the page rounded address
 }
 
+// <!! -------------------------------------------------------- File Backed mappings ------------------------------------------------- !!>
+
+// ------------------------ Private ------------------------------
+
 // Function to map the private page to process
-int mapPrivatePage(struct file* f, uint mmapaddr, int protection, int offset, int size) {		
+static int mapPrivatePage(struct file* f, uint mmapaddr, int protection, int offset, int size) {		
 	char* temp = kalloc(); // Allocate a temporary page
+	if(!temp) {
+		cprintf("mapPrivatePage Error: kalloc failed, free Memory not available\n");
+		return -1;
+	}
 	memset(temp, 0, PGSIZE);
 	int tempsize = size;
 	int i = 0;
+	
+	// copy the file content from page cache to allocated memory
 	while(tempsize != 0) {
 		// Get the page from page cache
 		char* page = getPage(f->ip, offset + PGSIZE * i, f->ip->inum); 
@@ -43,6 +53,7 @@ int mapPrivatePage(struct file* f, uint mmapaddr, int protection, int offset, in
 		offset = 0;
 		i += 1;
 	}
+
 	struct proc* p = myproc();
 	// Map the page to user process
 	if(mappages(p->pgdir, (void*)mmapaddr, PGSIZE, V2P(temp), PTE_U|protection) < 0) {
@@ -52,8 +63,24 @@ int mapPrivatePage(struct file* f, uint mmapaddr, int protection, int offset, in
 	return size;
 }
 
+static int mapPrivateMain(struct file* f, uint mmapaddr, int protection, int offset, int size) {
+		int currsize = 0;
+		int mainsize = size;
+		for(;currsize < mainsize; currsize += PGSIZE) {
+			int mapsize = PGSIZE > size ? size: PGSIZE;
+			if(mapPrivatePage(f, mmapaddr + currsize, protection, offset + currsize, mapsize) < 0) {
+					return -1;
+			}	
+			size -= PGSIZE;
+		}
+		return size;
+}
+
+
+// <!!-------------------------------------------------- Anonymous Mapping ------------------------------------------------------ !!>
+
 // Function to map anonymous private page
-int mapAnonPage(struct proc* p, uint mmapaddr, int protection, int size) {
+static int mapAnonPage(struct proc* p, uint mmapaddr, int protection, int size) {
 		int i = 0;
 		for(;i < size; i += PGSIZE) {
 			char* mapped_page = kalloc();
@@ -88,7 +115,7 @@ void* my_mmap(int addr, struct file* f, int size, int offset, int flags, int pro
 	if(!(flags & MAP_ANONYMOUS)) { // File backed mapping
 		// Private file-backed Mapping	
 		if((flags & MAP_PRIVATE)) {				
-			if(mapPrivatePage(f, mmapaddr, protection, offset, size) == -1) {
+			if(mapPrivateMain(f, mmapaddr, protection, offset, size) == -1) {
 				return (void*)-1;
 			}
 		}else { // Shared file-backed mapping
@@ -135,7 +162,7 @@ int my_munmap(uint addr, int size) {
 
 	for(; i < 30; i++) {
 		if(p->mmaps[i].virt_addr == addr) {
-//			cprintf("\n--------- Page Found for unmapping -------------\n");
+			cprintf("\n--------- Page Found for unmapping -------------\n");
 			total_size = p->mmaps[i].size;
 			zero_mmap_region_struct(&p->mmaps[i]);
 			break;

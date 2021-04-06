@@ -4,7 +4,7 @@
 #include "mmap.h"
 
 int main(int args, char* argv[]) {
-	int size = 4096;
+	int size = 10296;
 	int fd = open(argv[1], O_RDONLY);
 	if(fd == -1) {
 		printf(1, "File does not exist\n");
