@@ -21,7 +21,7 @@ pagecacheinit(void) {
 static char* findPage(uint inum, int offset) {
 		for(int i = 0; i < NPAGECACHE; i++) {
 				if(pages[i].inode_number == inum && pages[i].offset == offset) {
-						cprintf("\n\nPage found returning: %p\n\n", pages[i].page);
+						cprintf("found returning: %p\n", pages[i].page);
 						return pages[i].page;
 				}
 		}
@@ -41,7 +41,7 @@ char* getPage(struct inode* ip, int offset, int inum) {
 	}
 
 	// If the page is not present then use one which has refcount as 0
-	cprintf("\n\nPage not present, use one from page cache\n\n\n");
+//	cprintf("not present, use one from page cache\n");
 	for(i = 0; i < NPAGECACHE; i++) {
 			if(pages[i].refCount == 0) {
 					break;
@@ -55,7 +55,7 @@ char* getPage(struct inode* ip, int offset, int inum) {
 	
 	// Read from the disk into page cache	
 	memset(pages[i].page, 0, PGSIZE);
-  int n = readi(ip, pages[i].page, offset, PGSIZE - 1); 		
+  int n = readi(ip, pages[i].page, offset, PGSIZE); 		
 	if(n == -1) {
 			cprintf("getPage Error: Read from disk failed\n");
 			return (char*)-1;

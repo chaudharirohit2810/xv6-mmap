@@ -25,14 +25,31 @@ uint findMmapAddr(struct proc* p) {
 }
 
 // Function to map the private page to process
-int mapPrivatePage(char* page, struct proc* p, uint mmapaddr, int protection) {
+int mapPrivatePage(struct file* f, uint mmapaddr, int protection, int offset, int size) {		
 	char* temp = kalloc(); // Allocate a temporary page
-	memmove(temp, page, PGSIZE); // Copy the content from page cache to allocated page	
+	memset(temp, 0, PGSIZE);
+	int tempsize = size;
+	int i = 0;
+	while(tempsize != 0) {
+		// Get the page from page cache
+		char* page = getPage(f->ip, offset + PGSIZE * i, f->ip->inum); 
+		if(page == (char*)-1) { // allocation of page from page cache failed
+			return -1;
+		}
+		int curroff = offset % PGSIZE;
+		int currsize = PGSIZE - curroff > tempsize ? tempsize: PGSIZE - curroff;
+		memmove(temp + size - tempsize, page + curroff, currsize); // Copy the content from page cache to allocated page	
+		tempsize -= currsize;
+		offset = 0;
+		i += 1;
+	}
+	struct proc* p = myproc();
 	// Map the page to user process
 	if(mappages(p->pgdir, (void*)mmapaddr, PGSIZE, V2P(temp), PTE_U|protection) < 0) {
 			return -1;
 	}
-	return PGSIZE;
+
+	return size;
 }
 
 // Function to map anonymous private page
@@ -65,16 +82,13 @@ void* my_mmap(int addr, struct file* f, int size, int offset, int flags, int pro
 	if(i == 30) {
 			return (void*)-1;
 	}
-	cprintf("mymmap: Allocated %d th entry in array\n\n", i);
-	if(!(flags & MAP_ANONYMOUS)) { // File backed mapping
-		// Get the page from page cache
-		char* page = getPage(f->ip, offset, f->ip->inum); 
-		if(page == (char*)-1) { // allocation of page from page cache failed
-			return (void*)-1;
-		}
+
+//	cprintf("mymmap: Allocated index %d entry in array\n", i);
 	
-		if((flags & MAP_PRIVATE)) {	// Private file-backed Mapping	
-			if(mapPrivatePage(page, p, mmapaddr, protection) == -1) {
+	if(!(flags & MAP_ANONYMOUS)) { // File backed mapping
+		// Private file-backed Mapping	
+		if((flags & MAP_PRIVATE)) {				
+			if(mapPrivatePage(f, mmapaddr, protection, offset, size) == -1) {
 				return (void*)-1;
 			}
 		}else { // Shared file-backed mapping
@@ -110,10 +124,9 @@ void zero_mmap_region_struct(struct mmap_region* mr) {
 	mr->isshared = -1;
 }
 
-
 // Main function of munmap system call
 int my_munmap(uint addr, int size) {
-	cprintf("This is munmap system call\n");
+//	cprintf("This is munmap system call\n");
 	struct proc* p = myproc();
 	pte_t *pte;
 	addr = PGROUNDUP(addr);	
@@ -122,7 +135,7 @@ int my_munmap(uint addr, int size) {
 
 	for(; i < 30; i++) {
 		if(p->mmaps[i].virt_addr == addr) {
-			cprintf("\n\n--------- Page Found for unmapping -------------\n\n");
+//			cprintf("\n--------- Page Found for unmapping -------------\n");
 			total_size = p->mmaps[i].size;
 			zero_mmap_region_struct(&p->mmaps[i]);
 			break;
