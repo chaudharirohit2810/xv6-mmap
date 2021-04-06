@@ -12,12 +12,22 @@
 #include "memlayout.h"
 #include "mmap.h"
 
+// To find the mmap region virtual address
+uint findMmapAddr(struct proc* p) {
+		uint max_addr = MMAPBASE;
+		// To find the max allocated virtual address
+		for(int i = 0; i < 30; i++) {
+			if(p->mmaps[i].virt_addr + p->mmaps[i].size > max_addr) {
+				max_addr = p->mmaps[i].virt_addr + p->mmaps[i].size;	
+			}
+		}
+		return PGROUNDUP(max_addr); // Return the page rounded address
+}
 
 // Function to map the private page to process
 int mapPrivatePage(char* page, struct proc* p, uint mmapaddr, int protection) {
 	char* temp = kalloc(); // Allocate a temporary page
 	memmove(temp, page, PGSIZE); // Copy the content from page cache to allocated page	
-	cprintf("Page Address: %p\n", temp);
 	// Map the page to user process
 	if(mappages(p->pgdir, (void*)mmapaddr, PGSIZE, V2P(temp), PTE_U|protection) < 0) {
 			return -1;
@@ -41,8 +51,8 @@ int mapAnonPage(struct proc* p, uint mmapaddr, int protection, int size) {
 
 // Main function of mmap system call
 void* my_mmap(int addr, struct file* f, int size, int offset, int flags, int protection) {	
-	uint mmapaddr = PGROUNDUP(MMAPBASE);
 	struct proc* p = myproc(); // Current running process
+	uint mmapaddr = findMmapAddr(p); 
 
 	// Find empty memory map region
 	int i = 0;
@@ -56,7 +66,6 @@ void* my_mmap(int addr, struct file* f, int size, int offset, int flags, int pro
 			return (void*)-1;
 	}
 	cprintf("mymmap: Allocated %d th entry in array\n\n", i);
-
 	if(!(flags & MAP_ANONYMOUS)) { // File backed mapping
 		// Get the page from page cache
 		char* page = getPage(f->ip, offset, f->ip->inum); 
