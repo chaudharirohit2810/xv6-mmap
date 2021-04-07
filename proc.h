@@ -32,6 +32,17 @@ struct context {
   uint eip;
 };
 
+
+struct mmap_region {
+		uint virt_addr;
+		uint size;
+		int flags;
+		int isshared;
+		int protection;
+		struct file* f;
+		int offset;
+};
+
 enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
 // Per-process state
@@ -49,6 +60,7 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+	struct mmap_region mmaps[30];      // List of allocated mmap regions
 };
 
 // Process memory is laid out contiguously, low addresses first:

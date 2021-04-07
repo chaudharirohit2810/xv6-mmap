@@ -16,6 +16,7 @@
 #include "file.h"
 #include "fcntl.h"
 #include "sys_mmap.h"
+#include "mmap.h"
 
 // Fetch the nth word-sized system call argument as a file descriptor
 // and return both the descriptor and the corresponding struct file.
@@ -465,7 +466,9 @@ int sys_mmap(void) {
 	}
 	// File descriptor arguement
 	if(argfd(4, &fd, &f) < 0) {
-		return -1;
+		if(!(flags & MAP_ANON)) {
+			return -1;
+		}
 	}
 
 	
