@@ -42,7 +42,7 @@ static int mapPrivatePage(struct file* f, uint mmapaddr, int protection, int off
 	// copy the file content from page cache to allocated memory
 	while(tempsize != 0) {
 		// Get the page from page cache
-		char* page = getPage(f->ip, offset + PGSIZE * i, f->ip->inum); 
+		char* page = getPage(f->ip, offset + PGSIZE * i, f->ip->inum, f->ip->dev); 
 		if(page == (char*)-1) { // allocation of page from page cache failed
 			return -1;
 		}
@@ -188,7 +188,7 @@ int my_munmap(uint addr, int size) {
 		char* v = P2V(pa);
 		kfree(v);
 		*pte = 0;
-		freePage(p->mmaps[i].f->ip->inum, p->mmaps[i].offset + currsize);
+//		freePage(p->mmaps[i].f->ip->inum, p->mmaps[i].offset + currsize);
 	}
 
 	zero_mmap_region_struct(&p->mmaps[i]);
