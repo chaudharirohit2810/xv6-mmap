@@ -37,14 +37,14 @@ char* getPage(struct inode* ip, int offset, int inum, int dev) {
 	// Find the page in page cache
 	struct pagecache* res = findPage(inum, offset, dev);
 	if(res) {
-		return res->page;
+			return res->page;
 	}
 
 	// If the page is not present then use one which has refcount as 0
 	cprintf("not present, use one from page cache\n");
 	struct pagecache* allocpagecache = &pages[totalCount++];
 	if(totalCount == NPAGECACHE) {
-		totalCount = 0;
+			totalCount = 0;
 	}
 	
 	// Read from the disk into page cache	
