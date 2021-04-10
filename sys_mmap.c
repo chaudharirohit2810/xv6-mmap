@@ -12,22 +12,80 @@
 #include "memlayout.h"
 #include "mmap.h"
 
-// To find the mmap region virtual address
-static uint findMmapAddr(struct proc *p) {
-  uint max_addr = MMAPBASE;
-  // To find the max allocated virtual address
-  for (int i = 0; i < 30; i++) {
-    if (p->mmaps[i].virt_addr + p->mmaps[i].size > max_addr) {
-      max_addr = p->mmaps[i].virt_addr + p->mmaps[i].size;
-    }
-  }
-  return PGROUNDUP(max_addr); // Return the page rounded address
+// Copy the mmap regions
+// first arguement: dest
+// second arguement: src
+void copy_mmap_struct(struct mmap_region *mr1, struct mmap_region *mr2) {
+  mr1->virt_addr = mr2->virt_addr;
+  mr1->size = mr2->size;
+  mr1->flags = mr2->flags;
+  mr1->protection = mr2->protection;
+  mr1->f = mr2->f;
+  mr1->offset = mr2->offset;
+  mr1->isshared = mr2->isshared;
 }
 
-// <!! -------------------------------------------------------- File Backed mappings ------------------------------------------------- !!>
+void printMaps(struct proc *p) {
+  int i = 0;
+  cprintf("\n\n-------------All the mappings------------\n");
+  while (i < 30 && p->mmaps[i].virt_addr) {
+    cprintf("Virtual address: %p\tSize: %d\n", p->mmaps[i].virt_addr, p->mmaps[i].size);
+    i += 1;
+  }
+}
 
-// ------------------------ Private ------------------------------
+// To find the mmap region virtual address
+static int findMmapAddr(struct proc *p, int size) {
+  // If any page is not mapped yet
+  if (p->mmaps[0].virt_addr == 0) {
+    cprintf("Mmap address: %p Index: %d\n", PGROUNDUP(MMAPBASE), 0);
+    p->mmaps[0].virt_addr = PGROUNDUP(MMAPBASE);
+    p->mmaps[0].size = size;
+    return 0; // Return the page rounded address
+  }
 
+  // TODO: Check if page can be mapped between MMAPBASE and first mapping
+
+  // Find the map address
+  int i = 0;
+  while (i < 30 && p->mmaps[i + 1].virt_addr) {
+    int start_addr = PGROUNDUP(p->mmaps[i].virt_addr + p->mmaps[i].size);
+    int end_addr = PGROUNDUP(p->mmaps[i + 1].virt_addr);
+    if (end_addr - start_addr > size) {
+      break;
+    }
+    i += 1;
+  }
+  // If i is 30 then no more mapping possible return -1
+  if (i >= 29) {
+    return -1;
+  }
+  // Find total number of mappings
+  int length = 0;
+  while (p->mmaps[length].virt_addr) {
+    length += 1;
+  }
+  // Right shift all mappings
+  int j = length;
+  while (j > i + 1) {
+    copy_mmap_struct(&p->mmaps[j], &p->mmaps[j - 1]);
+    j--;
+  }
+  uint mmapaddr = PGROUNDUP(p->mmaps[i].virt_addr + p->mmaps[i].size);
+  cprintf("Mmapaddr: %p\n", mmapaddr);
+  // If the mmapaddr is greater than KERNBASE
+  if (mmapaddr >= KERNBASE) {
+    return -1;
+  }
+  // Store the virtual_address in mapping
+  p->mmaps[i + 1].virt_addr = mmapaddr;
+  p->mmaps[i + 1].size = size;
+  cprintf("Mmap address: %p Index: %d\n", p->mmaps[i + 1].virt_addr, i + 1);
+
+  return i + 1; // Return the index of mmap mapping
+}
+
+// ------------------------ File Backed Private Mapping ------------------------------
 // Function to map the private page to process
 static int mapPrivatePage(struct file *f, uint mmapaddr, int protection, int offset, int size) {
   char *temp = kalloc(); // Allocate a temporary page
@@ -83,9 +141,15 @@ static int mapAnonPage(struct proc *p, uint mmapaddr, int protection, int size) 
   int i = 0;
   for (; i < size; i += PGSIZE) {
     char *mapped_page = kalloc();
+    if (!mapped_page) {
+      cprintf("Map Anon: Kalloc failed\n");
+      return -1;
+    }
     memset(mapped_page, 0, PGSIZE);
     if (mappages(p->pgdir, (void *)mmapaddr + i, PGSIZE, V2P(mapped_page), PTE_U | protection) < 0) {
       cprintf("Map Anon: mappages failed\n");
+      deallocuvm(p->pgdir, mmapaddr + i - PGSIZE, mmapaddr);
+      kfree(mapped_page);
       return -1;
     }
   }
@@ -95,15 +159,14 @@ static int mapAnonPage(struct proc *p, uint mmapaddr, int protection, int size) 
 // Main function of mmap system call
 void *my_mmap(int addr, struct file *f, int size, int offset, int flags, int protection) {
   struct proc *p = myproc(); // Current running process
-  uint mmapaddr = findMmapAddr(p);
+  int i = findMmapAddr(p, size);
 
-  // Find empty memory map region
-  int i = 0;
-  for (; i < 30; i++) {
-    if (p->mmaps[i].virt_addr == 0) {
-      break;
-    }
+  if (i == -1) {
+    cprintf("Mapping not available\n");
+    return (void *)-1;
   }
+  uint mmapaddr = p->mmaps[i].virt_addr;
+
   // If the structure for memory mapping not available
   if (i == 30) {
     return (void *)-1;
@@ -126,8 +189,6 @@ void *my_mmap(int addr, struct file *f, int size, int offset, int flags, int pro
   }
 
   // Store info in process
-  p->mmaps[i].virt_addr = mmapaddr;
-  p->mmaps[i].size = size;
   p->mmaps[i].flags = flags;
   p->mmaps[i].protection = protection;
   p->mmaps[i].offset = offset;
@@ -158,7 +219,7 @@ int my_munmap(uint addr, int size) {
 
   for (; i < 30; i++) {
     if (p->mmaps[i].virt_addr == addr) {
-      cprintf("\n--------- Page Found for unmapping -------------\n");
+      cprintf("unmapping: %p\n", addr);
       total_size = p->mmaps[i].size;
       break;
     }
@@ -188,6 +249,10 @@ int my_munmap(uint addr, int size) {
     *pte = 0;
   }
 
+  while (i < 30 && p->mmaps[i + 1].virt_addr) {
+    copy_mmap_struct(&p->mmaps[i], &p->mmaps[i + 1]);
+    i += 1;
+  }
   zero_mmap_region_struct(&p->mmaps[i]);
 
   return 0;
