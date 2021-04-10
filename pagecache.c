@@ -12,6 +12,10 @@ int totalCount = 0;
 void pagecacheinit(void) {
   for (int i = 0; i < NPAGECACHE; i++) {
     pages[i].page = kalloc();
+    if (!pages[i].page) {
+      cprintf("pagecacheinit: Kalloc failed");
+      return;
+    }
     memset(pages[i].page, 0, PGSIZE);
   }
   cprintf("Initialized the page cache\n");
@@ -21,7 +25,7 @@ void pagecacheinit(void) {
 static struct pagecache *findPage(uint inum, int offset, int dev) {
   for (int i = 0; i < NPAGECACHE; i++) {
     if (pages[i].inode_number == inum && pages[i].offset == offset && pages[i].dev == dev) {
-      cprintf("found returning: %p\n", pages[i].page);
+      //      cprintf("found returning: %p\n", pages[i].page);
       return &pages[i];
     }
   }
@@ -39,7 +43,7 @@ char *getPage(struct inode *ip, int offset, int inum, int dev) {
   }
 
   // If the page is not present then use one which has refcount as 0
-  cprintf("not present, use one from page cache\n");
+  //  cprintf("not present, use one from page cache\n");
   struct pagecache *allocpagecache = &pages[totalCount++];
   if (totalCount == NPAGECACHE) {
     totalCount = 0;
