@@ -39,7 +39,7 @@ static int findMmapAddr(struct proc *p, int size) {
   // If any page is not mapped yet
   if (p->mmaps[0].virt_addr == 0) {
     if (PGROUNDUP(MMAPBASE + size) >= KERNBASE) {
-			cprintf("Address exceeds KERNBASE\n");
+      cprintf("Address exceeds KERNBASE\n");
       return -1;
     }
     //    cprintf("Mmap address: %p Index: %d\n", PGROUNDUP(MMAPBASE), 0);
@@ -62,7 +62,7 @@ static int findMmapAddr(struct proc *p, int size) {
   }
   // If i is 30 then no more mapping possible return -1
   if (i >= 29) {
-		cprintf("Mmap region count exceeded\n");
+    cprintf("Mmap region count exceeded\n");
     return -1;
   }
   // Find total number of mappings
@@ -79,7 +79,7 @@ static int findMmapAddr(struct proc *p, int size) {
   uint mmapaddr = PGROUNDUP(p->mmaps[i].virt_addr + p->mmaps[i].size);
   // If the mmapaddr is greater than KERNBASE
   if (PGROUNDUP(mmapaddr + size) >= KERNBASE) {
-		cprintf("Address exceeds KERNBASE\n");
+    cprintf("Address exceeds KERNBASE\n");
     return -1;
   }
   // Store the virtual_address in mapping
