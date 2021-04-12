@@ -91,10 +91,12 @@ void            end_op();
 extern int      ismp;
 void            mpinit(void);
 
+// sys_mmap.c
+int copyMaps(struct proc *, struct proc *);
+
 // pagecache.c
 void 						pagecacheinit(void);
-char* 					getPage(struct inode*, int, int, int);
-//int 						freePage(int , int );
+char 						*getPage(struct inode *, int, int, int);
 
 // picirq.c
 void            picenable(int);
@@ -190,9 +192,8 @@ void            switchuvm(struct proc*);
 void            switchkvm(void);
 int             copyout(pde_t*, uint, void*, uint);
 void            clearpteu(pde_t *pgdir, char *uva);
-int 						mappages(pde_t *, void *, uint, uint, int);
-pte_t *         walkpgdir(pde_t *, const void *, int );
-
+int mappages(pde_t *, void *, uint, uint, int);
+pte_t *walkpgdir(pde_t *, const void *, int);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))

@@ -445,53 +445,48 @@ sys_pipe(void)
   return 0;
 }
 
-
-// implementation of mmap system call 
+// implementation of mmap system call
 int sys_mmap(void) {
 
-	// <!!------------------------- Arguements of system call -----------------------!!>
-	int addr, size, protection, flags, offset;
-	int fd;
-	struct file *f; 
-	
+  // <!!------------------------- Arguements of system call -----------------------!!>
+  int addr, size, protection, flags, offset;
+  int fd;
+  struct file *f;
 
-	// <!!----------------------------Getting the arguements-------------------------!!>
-	// Integer arguements
-	if(argint(1, &size) < 0 || argint(2, &protection) < 0 || argint(3, &flags) < 0 || argint(5, &offset) < 0) {
-		return -1;
-	}
-	// address arguement
-	if(argint(0, &addr) < 0) {
-		return -1;
-	}
-	// File descriptor arguement
-	if(argfd(4, &fd, &f) < 0) {
-		if(!(flags & MAP_ANON)) {
-			return -1;
-		}
-	}
+  // <!!----------------------------Getting the arguements-------------------------!!>
+  // Integer arguements
+  if (argint(1, &size) < 0 || argint(2, &protection) < 0 || argint(3, &flags) < 0 || argint(5, &offset) < 0) {
+    return -1;
+  }
+  // address arguement
+  if (argint(0, &addr) < 0) {
+    return -1;
+  }
+  // File descriptor arguement
+  if (argfd(4, &fd, &f) < 0) {
+    if (!(flags & MAP_ANON)) {
+      return -1;
+    }
+  }
 
-	
-	// <!!-------------------------------- Debugging-----------------------------------------!!>
-	int development = 0;
-	if(development == 1) {
-		cprintf("\nArguements are:\n");
-		cprintf("Size:%d  Protection:%d  Flags:%d  Offset:%d\n", size, protection, flags, offset);
-		cprintf("Pointer address: %p\n\n", addr);
-	}
+  // <!!-------------------------------- Debugging-----------------------------------------!!>
+  int development = 0;
+  if (development == 1) {
+    cprintf("\nArguements are:\n");
+    cprintf("Size:%d  Protection:%d  Flags:%d  Offset:%d\n", size, protection, flags, offset);
+    cprintf("Pointer address: %p\n\n", addr);
+  }
 
-	return (int)my_mmap(addr, f, size, offset, flags, protection);
+  return (int)my_mmap(addr, f, size, offset, flags, protection);
 }
-
-
 
 // munmap system call
 int sys_munmap(void) {
-	int addr, size;
-	// <!!---------------------------------------Getting the arguements-------------------------------!!>
-	if(argint(0, &addr) < 0 || argint(1, &size)) {
-		return -1;
-	}
-	
-	return my_munmap(addr, size);
+  int addr, size;
+  // <!!---------------------------------------Getting the arguements-------------------------------!!>
+  if (argint(0, &addr) < 0 || argint(1, &size)) {
+    return -1;
+  }
+
+  return my_munmap(addr, size);
 }

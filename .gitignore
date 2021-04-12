@@ -17,3 +17,4 @@ mkfs
 *.swp
 cscope.out
 tags
+.clang-format
