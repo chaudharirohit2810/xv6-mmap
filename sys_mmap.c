@@ -64,12 +64,12 @@ uint getPhysicalPage(struct proc *p, uint tempaddr, pte_t **pte) {
 
 // Copy mmaps from parent to child process
 int copyMaps(struct proc *parent, struct proc *child) {
-	printMaps(parent);
   pte_t *pte;
   int i = 0;
   while (i < parent->total_mmaps) {
     uint virt_addr = parent->mmaps[i].virt_addr;
     int protection = parent->mmaps[i].protection;
+    int isshared = parent->mmaps[i].isshared;
     uint size = parent->mmaps[i].size;
     uint start = virt_addr;
     for (; start < virt_addr + size; start += PGSIZE) {
@@ -78,12 +78,19 @@ int copyMaps(struct proc *parent, struct proc *child) {
         cprintf("Error while copying memory mappings\n");
         return -1;
       }
-      char *mem = kalloc();
-      char *parentmem = (char *)P2V(pa);
-      memmove(mem, parentmem, PGSIZE);
-      if (mappages(child->pgdir, (void *)start, PGSIZE, V2P(mem), PTE_U | protection) < 0) {
-        cprintf("CopyMaps: mappages failed\n");
-        return -1;
+      if (isshared) {
+        char *parentmem = (char *)P2V(pa);
+        if (mappages(child->pgdir, (void *)start, PGSIZE, V2P(parentmem), PTE_U | protection) < 0) {
+          cprintf("CopyMaps: mappages failed\n");
+        }
+      } else {
+        char *mem = kalloc();
+        char *parentmem = (char *)P2V(pa);
+        memmove(mem, parentmem, PGSIZE);
+        if (mappages(child->pgdir, (void *)start, PGSIZE, V2P(mem), PTE_U | protection) < 0) {
+          cprintf("CopyMaps: mappages failed\n");
+          return -1;
+        }
       }
       copy_mmap_struct(&parent->mmaps[i], &child->mmaps[i]);
     }
