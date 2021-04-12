@@ -8,6 +8,7 @@ void mmapMultiTest(int);       // Check multiple private maps and munmaps
 void anomMmapTest();           // Check private anonymous mappings
 void exceedSizeMmapTest();     // Check when the mmap size exceeds KERNBASE
 void exceedCountMmapTest(int); // Check when mmap region count exceeds
+void mmapPrivateFileMappingForkTest(int); // Test for private file mapping with fork
 
 int main(int args, char *argv[]) {
   int fd = open(argv[1], O_RDONLY);
@@ -15,8 +16,9 @@ int main(int args, char *argv[]) {
     printf(1, "File does not exist\n");
     exit();
   }
-  //	mmapMultiTest(fd);
-  anomMmapTest();
+//  mmapMultiTest(fd);
+  //  anomMmapTest();
+  mmapPrivateFileMappingForkTest(fd);
   exit();
 }
 
@@ -102,3 +104,22 @@ void exceedCountMmapTest(int fd) {
     }
   }
 }
+
+// ------------------------------------------------- private file backed mapping with fork test -------------------------------------------------------
+void mmapPrivateFileMappingForkTest(int fd) {
+	char* ret = mmap((void*)0, 200, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
+	char* ret2 = mmap((void*)0, 200, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 300);
+  int pid = fork();
+  if (pid == 0) {
+    printf(1, "\n\n-------------Child process-----------\n\n");
+		printf(1, "Child Mapping 1: %s\n", ret);
+		printf(1, "Child Mapping 2: %s\n", ret2);
+		sleep(3);
+  } else {
+    wait();
+    printf(1, "\n\n------Parent process----------\n\n");
+		printf(1, "Parent Mapping 1: %s\n", ret);
+		printf(1, "Parent Mapping 2: %s\n", ret2);
+  }
+}
+

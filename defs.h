@@ -91,6 +91,9 @@ void            end_op();
 extern int      ismp;
 void            mpinit(void);
 
+// sys_mmap.c
+int copyMaps(struct proc *, struct proc *);
+
 // pagecache.c
 void 						pagecacheinit(void);
 char 						*getPage(struct inode *, int, int, int);
