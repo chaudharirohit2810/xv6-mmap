@@ -26,11 +26,11 @@ int main(int args, char *argv[]) {
   //  mmapMultiTest(fd);
   //  anon_private_test();
   //  anon_missing_flags_test();
-  anon_exceed_count_test();
+  // anon_exceed_count_test();
   //  mmapPrivateFileMappingForkTest(fd);
   //  mmapSharedFileMappingForkTest(fd);
   //  mmapSharedWritableMappingTest(fd);
-  // anon_fork_test();
+  anon_fork_test();
   exit();
 }
 
