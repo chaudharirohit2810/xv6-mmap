@@ -92,7 +92,7 @@ extern int      ismp;
 void            mpinit(void);
 
 // sys_mmap.c
-int copyMaps(struct proc *, struct proc *);
+int copy_maps(struct proc *, struct proc *);
 
 // pagecache.c
 void 						pagecacheinit(void);
