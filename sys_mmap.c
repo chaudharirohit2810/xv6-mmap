@@ -23,7 +23,6 @@ void zero_mmap_region_struct(struct mmap_region *mr) {
   mr->f = 0;
   mr->offset = 0;
   mr->flags = 0;
-  mr->isshared = -1;
 }
 
 // Copy the mmap regions from src to dest
@@ -34,7 +33,6 @@ void copy_mmap_struct(struct mmap_region *mr1, struct mmap_region *mr2) {
   mr1->protection = mr2->protection;
   mr1->f = mr2->f;
   mr1->offset = mr2->offset;
-  mr1->isshared = mr2->isshared;
 }
 
 // Print all the memory mappings
@@ -42,7 +40,7 @@ void printMaps(struct proc *p) {
   int i = 0;
   cprintf("Total maps: %d\n", p->total_mmaps);
   while (i < p->total_mmaps) {
-    cprintf("Virtual address: %p\tSize: %d\tisShared: %d\n", p->mmaps[i].virt_addr, p->mmaps[i].size, p->mmaps[i].isshared);
+    cprintf("Virtual address: %p\tSize: %d\tisShared: %d\n", p->mmaps[i].virt_addr, p->mmaps[i].size, p->mmaps[i].flags & MAP_SHARED);
     i += 1;
   }
 }
@@ -69,7 +67,7 @@ int copyMaps(struct proc *parent, struct proc *child) {
   while (i < parent->total_mmaps) {
     uint virt_addr = parent->mmaps[i].virt_addr;
     int protection = parent->mmaps[i].protection;
-    int isshared = parent->mmaps[i].isshared;
+    int isshared = parent->mmaps[i].flags & MAP_SHARED;
     uint size = parent->mmaps[i].size;
     uint start = virt_addr;
     for (; start < virt_addr + size; start += PGSIZE) {
@@ -85,6 +83,10 @@ int copyMaps(struct proc *parent, struct proc *child) {
         }
       } else {
         char *mem = kalloc();
+				if(!mem) {
+					 cprintf("CopyMaps: Kalloc failed\n");
+					 return -1;
+				}
         char *parentmem = (char *)P2V(pa);
         memmove(mem, parentmem, PGSIZE);
         if (mappages(child->pgdir, (void *)start, PGSIZE, V2P(mem), PTE_U | protection) < 0) {
@@ -92,10 +94,11 @@ int copyMaps(struct proc *parent, struct proc *child) {
           return -1;
         }
       }
-      copy_mmap_struct(&parent->mmaps[i], &child->mmaps[i]);
+      copy_mmap_struct(&child->mmaps[i], &parent->mmaps[i]);
     }
     i += 1;
   }
+	child->total_mmaps = parent->total_mmaps;
   return 0;
 }
 
@@ -234,6 +237,9 @@ void *my_mmap(int addr, struct file *f, int size, int offset, int flags, int pro
   }
   uint mmapaddr = p->mmaps[i].virt_addr;
   if (!(flags & MAP_ANONYMOUS)) { // File backed mapping
+		if((flags & MAP_SHARED) && (protection & PROT_WRITE) && !f->writable) {
+			return (void*)-1;
+		}
     if (mapPrivateMain(f, mmapaddr, protection, offset, size) == -1) {
       return (void *)-1;
     }
@@ -247,7 +253,6 @@ void *my_mmap(int addr, struct file *f, int size, int offset, int flags, int pro
   p->mmaps[i].protection = protection;
   p->mmaps[i].offset = offset;
   p->mmaps[i].f = f;
-  p->mmaps[i].isshared = flags & MAP_SHARED;
   p->total_mmaps += 1;
 
   return (void *)mmapaddr;
@@ -256,6 +261,7 @@ void *my_mmap(int addr, struct file *f, int size, int offset, int flags, int pro
 // Main function of munmap system call
 int my_munmap(uint addr, int size) {
   struct proc *p = myproc();
+	printMaps(p);
   pte_t *pte;
   addr = PGROUNDUP(addr);
   int i = 0;
@@ -273,6 +279,16 @@ int my_munmap(uint addr, int size) {
     cprintf("unmapPage Error: Addr not present in mappings\n");
     return -1;
   }
+  uint isanon = p->mmaps[i].flags & MAP_ANONYMOUS;
+  uint isshared = p->mmaps[i].flags & MAP_SHARED;
+  if (isshared && !isanon && (p->mmaps[i].protection & PROT_WRITE)) {
+    // write into the file
+		p->mmaps[i].f->off = p->mmaps[i].offset;
+		if(filewrite(p->mmaps[i].f, (char*)p->mmaps[i].virt_addr, p->mmaps[i].size) < 0) {
+			cprintf("unmapPage Error: File write failed\n");
+			return -1;
+		}
+  }
   // Free the allocated page
   int currsize = 0;
   for (; currsize < total_size; currsize += PGSIZE) {
@@ -286,7 +302,6 @@ int my_munmap(uint addr, int size) {
     kfree(v);
     *pte = 0;
   }
-
   // Left shift the mmap array
   while (i < 30 && p->mmaps[i + 1].virt_addr) {
     copy_mmap_struct(&p->mmaps[i], &p->mmaps[i + 1]);
