@@ -248,6 +248,9 @@ exit(void)
     }
   }
 
+  // Delete all the mappings
+  delete_mmaps(curproc);
+
   begin_op();
   iput(curproc->cwd);
   end_op();

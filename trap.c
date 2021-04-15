@@ -44,6 +44,7 @@ void handle_page_fault() {
       if (mmap_store_data(p, page_fault_addr, PGSIZE, p->mmaps[i].flags, p->mmaps[i].protection, p->mmaps[i].f, p->mmaps[i].offset) < 0) {
         myproc()->killed = 1;
       }
+      p->mmaps[i].stored_size += PGSIZE;
       return;
     }
   }

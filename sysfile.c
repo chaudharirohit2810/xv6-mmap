@@ -15,7 +15,6 @@
 #include "sleeplock.h"
 #include "file.h"
 #include "fcntl.h"
-#include "sys_mmap.h"
 #include "mmap.h"
 
 // Fetch the nth word-sized system call argument as a file descriptor
@@ -487,6 +486,6 @@ int sys_munmap(void) {
   if (argint(0, &addr) < 0 || argint(1, &size)) {
     return -1;
   }
-
-  return my_munmap(addr, size);
+  struct proc *p = myproc();
+  return my_munmap(p, addr, size);
 }
