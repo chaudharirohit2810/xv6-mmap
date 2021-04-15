@@ -93,6 +93,7 @@ void            mpinit(void);
 
 // sys_mmap.c
 int copy_maps(struct proc *, struct proc *);
+int mmap_store_data(struct proc *, int, int, int, int, struct file *, int);
 
 // pagecache.c
 void 						pagecacheinit(void);

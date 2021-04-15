@@ -32,6 +32,24 @@ idtinit(void)
   lidt(idt, sizeof(idt));
 }
 
+void handle_page_fault() {
+  struct proc *p = myproc();
+  uint page_fault_addr = rcr2();
+  cprintf("Page fault address: %p   Total maps: %d\n", page_fault_addr, p->total_mmaps);
+  for (int i = 0; i < p->total_mmaps; i++) {
+    uint start = p->mmaps[i].virt_addr;
+    uint end = start + p->mmaps[i].size;
+
+    if (page_fault_addr >= start && page_fault_addr <= end) {
+      if (mmap_store_data(p, page_fault_addr, PGSIZE, p->mmaps[i].flags, p->mmaps[i].protection, p->mmaps[i].f, p->mmaps[i].offset) < 0) {
+        myproc()->killed = 1;
+      }
+      return;
+    }
+  }
+  myproc()->killed = 1;
+}
+
 //PAGEBREAK: 41
 void
 trap(struct trapframe *tf)
@@ -71,6 +89,9 @@ trap(struct trapframe *tf)
     uartintr();
     lapiceoi();
     break;
+	case 14: // Page fault
+		handle_page_fault();
+		break;
   case T_IRQ0 + 7:
   case T_IRQ0 + IRQ_SPURIOUS:
     cprintf("cpu%d: spurious interrupt at %x:%x\n",
