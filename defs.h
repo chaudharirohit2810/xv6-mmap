@@ -92,7 +92,11 @@ extern int      ismp;
 void            mpinit(void);
 
 // sys_mmap.c
-int copyMaps(struct proc *, struct proc *);
+void *my_mmap(int , struct file *, int , int , int , int ); // Main mmap function
+int my_munmap(struct proc *, int , int );                                        // Main munmap function
+int copy_maps(struct proc *, struct proc *);
+int mmap_store_data(struct proc *, int, int, int, int, struct file *, int);
+void delete_mmaps(struct proc*);  // Delete all the mappings
 
 // pagecache.c
 void 						pagecacheinit(void);

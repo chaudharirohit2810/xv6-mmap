@@ -196,7 +196,12 @@ fork(void)
     np->state = UNUSED;
     return -1;
   }
-  copyMaps(curproc, np);
+  if(copy_maps(curproc, np) < 0) {
+		kfree(np->kstack);
+		np->kstack = 0;
+		np->state = UNUSED;
+		return -1;
+	}
   np->sz = curproc->sz;
   np->parent = curproc;
   *np->tf = *curproc->tf;
@@ -242,6 +247,9 @@ exit(void)
       curproc->ofile[fd] = 0;
     }
   }
+
+  // Delete all the mappings
+  delete_mmaps(curproc);
 
   begin_op();
   iput(curproc->cwd);
