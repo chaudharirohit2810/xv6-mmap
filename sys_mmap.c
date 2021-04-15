@@ -290,7 +290,7 @@ int my_munmap(struct proc *p, int addr, int size) {
   if (isshared && !isanon && (p->mmaps[i].protection & PROT_WRITE)) {
     // write into the file
     p->mmaps[i].f->off = p->mmaps[i].offset;
-    if (filewrite(p->mmaps[i].f, (char *)p->mmaps[i].virt_addr, p->mmaps[i].size) < 0) {
+    if (filewrite(p->mmaps[i].f, (char *)p->mmaps[i].virt_addr, p->mmaps[i].stored_size) < 0) {
       cprintf("unmapPage Error: File write failed\n");
       return -1;
     }
