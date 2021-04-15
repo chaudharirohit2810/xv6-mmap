@@ -18,19 +18,19 @@ void mmapSharedFileMappingForkTest(int);    // Test for shared file mapping with
 void mmapSharedWritableMappingTest(int fd); // the mapping is shared and there is write permission on it but file is opened as read only
 
 int main(int args, char *argv[]) {
-  int fd = open(argv[1], O_RDONLY);
+  int fd = open(argv[1], O_RDWR);
   if (fd == -1) {
     printf(1, "File does not exist\n");
     exit();
   }
-  //mmapMultiTest(fd);
+  // mmapMultiTest(fd);
   // anon_private_test();
   // anon_missing_flags_test();
   // anon_exceed_count_test();
-  //  mmapPrivateFileMappingForkTest(fd);
-  //  mmapSharedFileMappingForkTest(fd);
-  //  mmapSharedWritableMappingTest(fd);
-  anon_fork_test();
+  // mmapPrivateFileMappingForkTest(fd);
+  // mmapSharedFileMappingForkTest(fd);
+  // mmapSharedWritableMappingTest(fd);
+  // anon_fork_test();
   exit();
 }
 

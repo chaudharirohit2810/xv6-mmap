@@ -75,9 +75,11 @@ int copy_maps(struct proc *parent, struct proc *child) {
       if (isshared) {
         // If pa is zero then page is not allocated yet, allocate and continue
         if (pa == 0) {
-          if (mmap_store_data(parent, start, PGSIZE, parent->mmaps[i].flags, protection, parent->mmaps[i].f, parent->mmaps[i].offset) < 0) {
+          int size = PGSIZE > parent->mmaps[i].size - parent->mmaps[i].stored_size ? parent->mmaps[i].size - parent->mmaps[i].stored_size : PGSIZE;
+          if (mmap_store_data(parent, start, size, parent->mmaps[i].flags, protection, parent->mmaps[i].f, parent->mmaps[i].offset) < 0) {
             return -1;
           }
+          parent->mmaps[i].stored_size += size;
         }
         pa = get_physical_page(parent, start, &pte);
         // If the page is shared and then all the data should be stored in page and mapped to each process
@@ -104,6 +106,9 @@ int copy_maps(struct proc *parent, struct proc *child) {
       }
     }
     copy_mmap_struct(&child->mmaps[i], &parent->mmaps[i]);
+    if (isshared) {
+      child->mmaps[i].ref_count = 1;
+    }
     i += 1;
   }
   child->total_mmaps = parent->total_mmaps;
@@ -290,7 +295,7 @@ int my_munmap(struct proc *p, int addr, int size) {
   if (isshared && !isanon && (p->mmaps[i].protection & PROT_WRITE)) {
     // write into the file
     p->mmaps[i].f->off = p->mmaps[i].offset;
-    if (filewrite(p->mmaps[i].f, (char *)p->mmaps[i].virt_addr, p->mmaps[i].stored_size) < 0) {
+    if (filewrite(p->mmaps[i].f, (char *)p->mmaps[i].virt_addr, p->mmaps[i].size) < 0) {
       cprintf("unmapPage Error: File write failed\n");
       return -1;
     }
@@ -311,7 +316,7 @@ int my_munmap(struct proc *p, int addr, int size) {
     *pte = 0;
   }
   // Left shift the mmap array
-  while (i < 30 && p->mmaps[i + 1].virt_addr) {
+  while (i <= 30 && p->mmaps[i + 1].virt_addr) {
     copy_mmap_struct(&p->mmaps[i], &p->mmaps[i + 1]);
     i += 1;
   }
@@ -321,10 +326,13 @@ int my_munmap(struct proc *p, int addr, int size) {
 }
 
 void delete_mmaps(struct proc *p) {
-  while (p->total_mmaps > 0) {
-    if (my_munmap(p, p->mmaps[p->total_mmaps - 1].virt_addr, p->mmaps[p->total_mmaps - 1].size) < 0) {
-      p->total_mmaps--;
+  int total_maps = p->total_mmaps;
+  while (total_maps > 0) {
+    if (p->mmaps[p->total_mmaps - 1].ref_count == 0) {
+      my_munmap(p, p->mmaps[total_maps - 1].virt_addr, p->mmaps[total_maps - 1].size);
     }
+    total_maps--;
   }
+  p->total_mmaps = 0;
   print_maps(p);
 }

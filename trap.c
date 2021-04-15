@@ -41,7 +41,8 @@ void handle_page_fault() {
     uint end = start + p->mmaps[i].size;
 
     if (page_fault_addr >= start && page_fault_addr <= end) {
-      if (mmap_store_data(p, page_fault_addr, PGSIZE, p->mmaps[i].flags, p->mmaps[i].protection, p->mmaps[i].f, p->mmaps[i].offset) < 0) {
+      int size = PGSIZE > p->mmaps[i].size - p->mmaps[i].stored_size ? p->mmaps[i].size - p->mmaps[i].stored_size : PGSIZE;
+      if (mmap_store_data(p, page_fault_addr, size, p->mmaps[i].flags, p->mmaps[i].protection, p->mmaps[i].f, p->mmaps[i].offset) < 0) {
         myproc()->killed = 1;
       }
       p->mmaps[i].stored_size += PGSIZE;
