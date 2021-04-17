@@ -115,6 +115,43 @@ int copy_maps(struct proc *parent, struct proc *child) {
   return 0;
 }
 
+int setup_mmap_arr(struct proc *p, int size, int i, uint mmapaddr) {
+  int j = p->total_mmaps;
+  while (j > i + 1) {
+    copy_mmap_struct(&p->mmaps[j], &p->mmaps[j - 1]);
+    j--;
+  }
+  // Check if the mmapaddr is greater than KERNBASE
+  if (PGROUNDUP(mmapaddr + size) >= KERNBASE) {
+    // Address Exceeds KERNBASE
+    return -1;
+  }
+  // Store the virtual_address in mapping
+  p->mmaps[i + 1].virt_addr = mmapaddr;
+  p->mmaps[i + 1].size = size;
+  return i + 1; // Return the index of mmap mapping
+}
+
+// To check if mmap is possible at user provided address
+int check_mmap_possible(struct proc *p, uint addr, int size) {
+  uint mmap_addr = PGROUNDUP(addr);
+  if (mmap_addr > PGROUNDUP(p->mmaps[p->total_mmaps - 1].virt_addr + p->mmaps[p->total_mmaps - 1].size)) {
+    return setup_mmap_arr(p, size, p->total_mmaps - 1, mmap_addr);
+  }
+  int i = 0;
+  for (; i < p->total_mmaps - 1; i++) {
+    if (p->mmaps[i].virt_addr >= mmap_addr) {
+      return -1;
+    }
+    int start_addr = PGROUNDUP(p->mmaps[i].virt_addr + p->mmaps[i].size);
+    int end_addr = PGROUNDUP(p->mmaps[i + 1].virt_addr);
+    if (mmap_addr > start_addr && end_addr > mmap_addr + size) {
+      return setup_mmap_arr(p, size, i, mmap_addr);
+    }
+  }
+  return -1;
+}
+
 // To find the mmap region virtual address
 int find_mmap_addr(struct proc *p, int size) {
   // If any page is not mapped yet
@@ -125,7 +162,7 @@ int find_mmap_addr(struct proc *p, int size) {
     }
     p->mmaps[0].virt_addr = PGROUNDUP(MMAPBASE);
     p->mmaps[0].size = size;
-    return 0; // Return the page rounded address
+    return 0; // Return the index in mmap region array
   }
   // TODO: Check if page can be mapped between MMAPBASE and first mapping
   // Find the map address
@@ -138,21 +175,8 @@ int find_mmap_addr(struct proc *p, int size) {
     }
     i += 1;
   }
-  int j = p->total_mmaps;
-  while (j > i + 1) {
-    copy_mmap_struct(&p->mmaps[j], &p->mmaps[j - 1]);
-    j--;
-  }
-  // Check if the mmapaddr is greater than KERNBASE
   uint mmapaddr = PGROUNDUP(p->mmaps[i].virt_addr + p->mmaps[i].size);
-  if (PGROUNDUP(mmapaddr + size) >= KERNBASE) {
-    // Address Exceeds KERNBASE
-    return -1;
-  }
-  // Store the virtual_address in mapping
-  p->mmaps[i + 1].virt_addr = mmapaddr;
-  p->mmaps[i + 1].size = size;
-  return i + 1; // Return the index of mmap mapping
+  return setup_mmap_arr(p, size, i, mmapaddr);
 }
 
 // <!! ------------------------ File Backed Mapping ------------------------------ !!>
@@ -254,12 +278,25 @@ void *my_mmap(int addr, struct file *f, int size, int offset, int flags, int pro
     // Mappings count exceeds
     return (void *)-1;
   }
-  int i = find_mmap_addr(p, size);
-  if (i == -1) {
+  if ((flags & MAP_SHARED) && (protection & PROT_WRITE) && !f->writable) {
     return (void *)-1;
   }
-  if ((flags & MAP_SHARED) && (protection & PROT_WRITE) && !f->writable) {
-    zero_mmap_region_struct(&p->mmaps[i]);
+  int i;
+  int flag = 0;
+  cprintf("address: %p\n", addr);
+  if ((void *)addr != (void *)0) {
+    if (addr < MMAPBASE) {
+      return (void *)-1;
+    }
+    i = check_mmap_possible(p, (uint)addr, size);
+    if (i != -1) {
+      flag = 1;
+    }
+  }
+  if (!flag) {
+    i = find_mmap_addr(p, size);
+  }
+  if (i == -1) {
     return (void *)-1;
   }
   // Store mmap info in process's mmap array
@@ -334,5 +371,4 @@ void delete_mmaps(struct proc *p) {
     total_maps--;
   }
   p->total_mmaps = 0;
-  print_maps(p);
 }
