@@ -61,7 +61,7 @@ struct proc {
   struct inode *cwd;            // Current directory
   char name[16];                // Process name (debugging)
   struct mmap_region mmaps[30]; // List of allocated mmap regions
-  uint total_mmaps;             // Total memory mappings
+  int total_mmaps;             // Total memory mappings
 };
 
 // Process memory is laid out contiguously, low addresses first:

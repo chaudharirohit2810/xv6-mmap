@@ -141,8 +141,10 @@ filewrite(struct file *f, char *addr, int n)
 
       begin_op();
       ilock(f->ip);
-      if ((r = writei(f->ip, addr + i, f->off, n1)) > 0)
-        f->off += r;
+      if ((r = writei(f->ip, addr + i, f->off, n1)) > 0) {
+     		updatePage(f->off, f->ip->inum, f->ip->dev, addr + i, r); 	 		    
+				f->off += r;
+			}
       iunlock(f->ip);
       end_op();
 

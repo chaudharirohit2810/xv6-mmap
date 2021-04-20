@@ -32,23 +32,29 @@ idtinit(void)
   lidt(idt, sizeof(idt));
 }
 
-void handle_page_fault() {
+// To handle page faults for mmap (lazy mapping)
+void handle_page_fault(struct trapframe *tf) {
   struct proc *p = myproc();
   uint page_fault_addr = rcr2();
-  cprintf("Page fault address: %p   Total maps: %d\n", page_fault_addr, p->total_mmaps);
   for (int i = 0; i < p->total_mmaps; i++) {
     uint start = p->mmaps[i].virt_addr;
     uint end = start + p->mmaps[i].size;
-
     if (page_fault_addr >= start && page_fault_addr <= end) {
+      pde_t *pte;
+      if (get_physical_page(p, PGROUNDDOWN(page_fault_addr), &pte) != 0) {
+        cprintf("Segmentation Fault: %p\n", rcr2());
+        myproc()->killed = 1;
+        return;
+      }
       int size = PGSIZE > p->mmaps[i].size - p->mmaps[i].stored_size ? p->mmaps[i].size - p->mmaps[i].stored_size : PGSIZE;
-      if (mmap_store_data(p, page_fault_addr, size, p->mmaps[i].flags, p->mmaps[i].protection, p->mmaps[i].f, p->mmaps[i].offset) < 0) {
+      if (mmap_store_data(p, PGROUNDDOWN(page_fault_addr), size, p->mmaps[i].flags, p->mmaps[i].protection, p->mmaps[i].f, p->mmaps[i].offset) < 0) {
         myproc()->killed = 1;
       }
       p->mmaps[i].stored_size += PGSIZE;
       return;
     }
   }
+  cprintf("Segmentation Fault: %p\n", rcr2());
   myproc()->killed = 1;
 }
 
@@ -91,16 +97,18 @@ trap(struct trapframe *tf)
     uartintr();
     lapiceoi();
     break;
-	case 14: // Page fault
-		handle_page_fault();
-		break;
+
   case T_IRQ0 + 7:
   case T_IRQ0 + IRQ_SPURIOUS:
     cprintf("cpu%d: spurious interrupt at %x:%x\n",
             cpuid(), tf->cs, tf->eip);
     lapiceoi();
     break;
-
+  case 14: // Page fault caused by mmap
+    if (rcr2() >= MMAPBASE) {
+      handle_page_fault(tf);
+      break;
+    }
   //PAGEBREAK: 13
   default:
     if(myproc() == 0 || (tf->cs&3) == 0){

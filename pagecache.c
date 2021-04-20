@@ -32,23 +32,32 @@ static struct pagecache *findPage(uint inum, int offset, int dev) {
   return 0;
 }
 
+void updatePage(int offset, int inum, int dev, char* addr, int size) {
+	int alligned_offset = offset - offset % PGSIZE;
+	int start_addr = offset % PGSIZE;
+  struct pagecache* res = findPage(inum, alligned_offset, dev);
+	if(!res) {
+		 return;
+	}
+	char* page = res->page;
+	memmove(page + start_addr, addr, size);
+	return;
+}
+
 // Check if page is present in page cache if yes return it or if absent allocate a new one
 char *getPage(struct inode *ip, int offset, int inum, int dev) {
   offset -= offset % PGSIZE;
-
   // Find the page in page cache
   struct pagecache *res = findPage(inum, offset, dev);
   if (res) {
     return res->page;
   }
-
   // If the page is not present then use one which has refcount as 0
   //  cprintf("not present, use one from page cache\n");
   struct pagecache *allocpagecache = &pages[totalCount++];
   if (totalCount == NPAGECACHE) {
     totalCount = 0;
   }
-
   // Read from the disk into page cache
   memset(allocpagecache->page, 0, PGSIZE);
   int n = readi(ip, allocpagecache->page, offset, PGSIZE);
@@ -56,11 +65,9 @@ char *getPage(struct inode *ip, int offset, int inum, int dev) {
     cprintf("getPage Error: Read from disk failed\n");
     return (char *)-1;
   }
-
   // Set the inode number & offset and increment the reference count
   allocpagecache->dev = dev;
   allocpagecache->inode_number = inum;
   allocpagecache->offset = offset;
-
   return allocpagecache->page;
 }
