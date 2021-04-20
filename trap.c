@@ -32,7 +32,7 @@ idtinit(void)
   lidt(idt, sizeof(idt));
 }
 
-void handle_page_fault() {
+void handle_page_fault(struct trapframe* tf) {
   struct proc *p = myproc();
   uint page_fault_addr = rcr2();
   for (int i = 0; i < p->total_mmaps; i++) {
@@ -40,6 +40,12 @@ void handle_page_fault() {
     uint end = start + p->mmaps[i].size;
 
     if (page_fault_addr >= start && page_fault_addr <= end) {
+      pde_t *pte;
+      if (get_physical_page(p, PGROUNDDOWN(page_fault_addr), &pte) != 0) {
+        cprintf("Segmentation Fault(Trying to write on read only mapping): %p\n", rcr2());
+        myproc()->killed = 1;
+        return;
+      }
       int size = PGSIZE > p->mmaps[i].size - p->mmaps[i].stored_size ? p->mmaps[i].size - p->mmaps[i].stored_size : PGSIZE;
       if (mmap_store_data(p, PGROUNDDOWN(page_fault_addr), size, p->mmaps[i].flags, p->mmaps[i].protection, p->mmaps[i].f, p->mmaps[i].offset) < 0) {
         myproc()->killed = 1;
@@ -48,7 +54,7 @@ void handle_page_fault() {
       return;
     }
   }
-	cprintf("Segmentation FAULT, address: %p\n", rcr2()); 
+  cprintf("Segmentation FAULT, address: %p\n", rcr2());
   myproc()->killed = 1;
 }
 
@@ -100,7 +106,7 @@ trap(struct trapframe *tf)
     break;
   case 14: // Page fault caused by mmap
     if (rcr2() >= MMAPBASE) {
-      handle_page_fault();
+      handle_page_fault(tf);
       break;
     }
   //PAGEBREAK: 13

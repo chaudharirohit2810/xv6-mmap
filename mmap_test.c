@@ -4,7 +4,8 @@
 #include "mmap.h"
 
 // Anonymous tests
-void anon_simple_private_test(void);                       // Check private anonymous mappings
+void anon_private_test(void);                       // Check private anonymous mappings
+void anon_shared_test(void);                               // Shared anonymous mapping test
 void anon_exceed_size_test(void);                          // Check when the mmap size exceeds KERNBASE
 void anon_exceed_count_test(void);                         // when mmap count exceeds 30 (mmap array limit)
 void anon_fork_test(void);                                 // Test for fork with anonymous mapping
@@ -14,6 +15,7 @@ void anon_invalid_addr_test(void);                         // When the address p
 void anon_overlap_given_addr_test(void);                   // When the address is provided by user and it overlaps with existing mapping
 void anon_intermediate_given_addr_test(void);              // When the provided address can be mapped between two already provided address
 void anon_intermediate_given_addr_not_possible_test(void); // When the provided address is between two mappings but mapping is not possible due to size
+void anon_write_on_ro_mapping_test(void);                  // When there is only read permission on mapping but user tries to write
 
 // Mmap tests
 void mmapMultiTest(int); // Check multiple private maps and munmaps
@@ -24,7 +26,9 @@ void mmapSharedFileMappingForkTest(int);    // Test for shared file mapping with
 void mmapSharedWritableMappingTest(int fd); // the mapping is shared and there is write permission on it but file is opened as read only
 
 void anonymous_tests(void) {
-  anon_simple_private_test();
+  anon_private_test();
+  anon_shared_test();
+  // anon_write_on_ro_mapping_test();
   anon_missing_flags_test();
   anon_exceed_count_test();
   anon_exceed_size_test();
@@ -220,7 +224,6 @@ void anon_exceed_count_test(void) {
     }
   }
   if (i == 30) {
-    printf(1, "anonymous exceed mapping count test ok\n");
     for (int j = 0; j < i; j++) {
       int ret = munmap((void *)arr[j], size);
       if (ret == -1) {
@@ -228,6 +231,7 @@ void anon_exceed_count_test(void) {
         exit();
       }
     }
+    printf(1, "anonymous exceed mapping count test ok\n");
   } else {
     printf(1, "anonymous exceed mapping count test failed: %d total mappings\n", i);
     exit();
@@ -235,12 +239,12 @@ void anon_exceed_count_test(void) {
 }
 
 // Simple private anonymous mapping test with maping having both read and write permission and size greater than two pages
-void anon_simple_private_test(void) {
-  printf(1, "anonymous simple private mapping test\n");
+void anon_private_test(void) {
+  printf(1, "anonymous private mapping test\n");
   int size = 10000;
   int *ret = (int *)mmap((void *)0, size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   if (ret == (void *)-1) {
-    printf(1, "anonymous simple private mapping test failed\n");
+    printf(1, "anonymous private mapping test failed\n");
     exit();
   }
   for (int i = 0; i < size / 4; i++) {
@@ -248,10 +252,70 @@ void anon_simple_private_test(void) {
   }
   int res = munmap((void *)ret, size);
   if (res == -1) {
-    printf(1, "anonymous simple private mapping test failed\n");
+    printf(1, "anonymous private mapping test failed\n");
     exit();
   }
-  printf(1, "anonymous simple private mapping test ok\n");
+  printf(1, "anonymous private mapping test ok\n");
+}
+
+// Shared mapping test
+void anon_shared_test(void) {
+  printf(1, "anonymous shared mapping test\n");
+  int size = 10000;
+  int *ret = mmap((void *)0, size, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0); // Shared mapping
+  if (ret == (void *)-1) {
+    printf(1, "anonymous shared mapping test failed\n");
+    exit();
+  }
+  int pid = fork();
+  if (pid == 0) {
+    for (int i = 0; i < size / 4; i++) {
+      ret[i] = i;
+    }
+		exit();
+  } else {
+    wait();
+    for (int i = 0; i < size / 4; i++) {
+      if (ret[i] != i) {
+        printf(1, "anonymous shared mapping test failed\n");
+        exit();
+      }
+    }
+    int res = munmap((void *)ret, size);
+    if (res == -1) {
+      printf(1, "anonymous shared mapping test failed\n");
+      exit();
+    }
+    printf(1, "anonymous shared mapping test ok\n");
+  }
+}
+
+// When there is only read permission on mapping but user tries to write
+void anon_write_on_ro_mapping_test(void) {
+  printf(1, "anonymous write on read only mapping test\n");
+  int pid = fork();
+  if (pid == -1) {
+    printf(1, "anonymous write on read only mapping failed in fork\n");
+  }
+  if (pid == 0) {
+    int size = 10000;
+    int *ret = (int *)mmap((void *)0, size, PROT_READ, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+    if (ret == (void *)-1) {
+      printf(1, "anonymous write on read only mapping test failed\n");
+      exit();
+    }
+    for (int i = 0; i < size / 4; i++) {
+      ret[i] = i;
+    }
+    int res = munmap((void *)ret, size);
+    if (res == -1) {
+      printf(1, "anonymous write on read only mapping test failed\n");
+      exit();
+    }
+    printf(1, "anonymous simple private mapping test ok\n");
+  } else {
+    wait();
+  }
 }
 
 // fork syscall with anonymous mapping test

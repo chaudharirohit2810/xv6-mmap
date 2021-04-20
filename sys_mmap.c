@@ -84,8 +84,8 @@ int copy_maps(struct proc *parent, struct proc *child) {
         pa = get_physical_page(parent, start, &pte);
         // If the page is shared and then all the data should be stored in page and mapped to each process
         char *parentmem = (char *)P2V(pa);
-        if (mappages(child->pgdir, (void *)start, PGSIZE, V2P(parentmem), PTE_U | protection) < 0) {
-					// ERROR: Shared mappages failed
+        if (mappages(child->pgdir, (void *)start, PGSIZE, V2P(parentmem), protection) < 0) {
+          // ERROR: Shared mappages failed
           cprintf("CopyMaps: mappages failed\n");
         }
       } else {
@@ -95,13 +95,13 @@ int copy_maps(struct proc *parent, struct proc *child) {
         }
         char *mem = kalloc();
         if (!mem) {
-					// ERROR: Private kalloc failed
+          // ERROR: Private kalloc failed
           return -1;
         }
         char *parentmem = (char *)P2V(pa);
         memmove(mem, parentmem, PGSIZE);
-        if (mappages(child->pgdir, (void *)start, PGSIZE, V2P(mem), PTE_U | protection) < 0) {
-					// ERROR: Private mappages failed
+        if (mappages(child->pgdir, (void *)start, PGSIZE, V2P(mem), protection) < 0) {
+          // ERROR: Private mappages failed
           return -1;
         }
       }
@@ -187,7 +187,7 @@ int find_mmap_addr(struct proc *p, int size) {
 static int map_pagecache_page_util(struct proc *p, struct file *f, uint mmapaddr, int protection, int offset, int size) {
   char *temp = kalloc(); // Allocate a temporary page
   if (!temp) {
-		// Kalloc failed
+    // Kalloc failed
     return -1;
   }
   memset(temp, 0, PGSIZE);
@@ -208,7 +208,7 @@ static int map_pagecache_page_util(struct proc *p, struct file *f, uint mmapaddr
     i += 1;
   }
   // Map the page to user process
-  if (mappages(p->pgdir, (void *)mmapaddr, PGSIZE, V2P(temp), PTE_U | protection) < 0) {
+  if (mappages(p->pgdir, (void *)mmapaddr, PGSIZE, V2P(temp), protection) < 0) {
     return -1;
   }
   return size;
@@ -232,12 +232,12 @@ static int map_pagecache_page(struct proc *p, struct file *f, uint mmapaddr, int
 static int map_anon_page(struct proc *p, uint off, int protection) {
   char *mapped_page = kalloc();
   if (!mapped_page) {
-		// Kalloc failed
+    // Kalloc failed
     return -1;
   }
   memset(mapped_page, 0, PGSIZE);
-  if (mappages(p->pgdir, (void *)off, PGSIZE, V2P(mapped_page), PTE_U | protection) < 0) {
-		// mappages failed
+  if (mappages(p->pgdir, (void *)off, PGSIZE, V2P(mapped_page), protection) < 0) {
+    // mappages failed
     deallocuvm(p->pgdir, off - PGSIZE, off);
     kfree(mapped_page);
     return -1;
@@ -304,23 +304,22 @@ void *my_mmap(int addr, struct file *f, int size, int offset, int flags, int pro
   }
   // Store mmap info in process's mmap array
   p->mmaps[i].flags = flags;
-  p->mmaps[i].protection = protection;
+  p->mmaps[i].protection = PTE_U | protection;
   p->mmaps[i].offset = offset;
   p->mmaps[i].f = f;
   p->total_mmaps += 1;
-
   return (void *)p->mmaps[i].virt_addr;
 }
 
 // Main function of munmap system call
 int my_munmap(struct proc *p, int addr, int size) {
   pte_t *pte;
-  addr = PGROUNDUP(addr);
+  uint mainaddr = PGROUNDUP(addr);
   int i = 0;
   int total_size = 0;
   // Find the mmap entry
   for (; i < 30; i++) {
-    if (p->mmaps[i].virt_addr == addr) {
+    if (p->mmaps[i].virt_addr == mainaddr) {
       total_size = p->mmaps[i].size;
       break;
     }
@@ -357,11 +356,11 @@ int my_munmap(struct proc *p, int addr, int size) {
   }
   zero_mmap_region_struct(&p->mmaps[i]);
   // Left shift the mmap array
-  while (i <= 30 && p->mmaps[i + 1].virt_addr) {
+  while (i < 30 && p->mmaps[i + 1].virt_addr) {
     copy_mmap_struct(&p->mmaps[i], &p->mmaps[i + 1]);
     i += 1;
   }
-  p->total_mmaps--;
+  p->total_mmaps -= 1;
   return 0;
 }
 

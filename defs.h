@@ -92,17 +92,17 @@ extern int      ismp;
 void            mpinit(void);
 
 // sys_mmap.c
-void *my_mmap(int , struct file *, int , int , int , int ); // Main mmap function
-int my_munmap(struct proc *, int , int );                                        // Main munmap function
-int copy_maps(struct proc *, struct proc *);
-int mmap_store_data(struct proc *, int, int, int, int, struct file *, int);
-void delete_mmaps(struct proc*);  // Delete all the mappings
-void print_maps(struct proc*);
+void *my_mmap(int, struct file *, int, int, int, int);                      // Main mmap function
+int my_munmap(struct proc *, int, int);                                     // Main munmap function
+int copy_maps(struct proc *, struct proc *);                                // Copy parent mapping to child (required for fork)
+int mmap_store_data(struct proc *, int, int, int, int, struct file *, int); // Store physical page in memory mapping
+void delete_mmaps(struct proc *);                                           // Delete all the mappings
+uint get_physical_page(struct proc *, uint, pte_t **);                      // Get physical page address from virtual
 
 // pagecache.c
-void 						pagecacheinit(void);
-char 						*getPage(struct inode *, int, int, int);
-void updatePage(int , int , int, char* , int); 
+void pagecacheinit(void);                     // Initialize the page cache
+char *getPage(struct inode *, int, int, int); // Find the page for given file mapping
+void updatePage(int, int, int, char *, int);  // Update the page in pagecache
 
 // picirq.c
 void            picenable(int);
