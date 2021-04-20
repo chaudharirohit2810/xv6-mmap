@@ -32,17 +32,17 @@ idtinit(void)
   lidt(idt, sizeof(idt));
 }
 
-void handle_page_fault(struct trapframe* tf) {
+// To handle page faults for mmap (lazy mapping)
+void handle_page_fault(struct trapframe *tf) {
   struct proc *p = myproc();
   uint page_fault_addr = rcr2();
   for (int i = 0; i < p->total_mmaps; i++) {
     uint start = p->mmaps[i].virt_addr;
     uint end = start + p->mmaps[i].size;
-
     if (page_fault_addr >= start && page_fault_addr <= end) {
       pde_t *pte;
       if (get_physical_page(p, PGROUNDDOWN(page_fault_addr), &pte) != 0) {
-        cprintf("Segmentation Fault(Trying to write on read only mapping): %p\n", rcr2());
+        cprintf("Segmentation Fault: %p\n", rcr2());
         myproc()->killed = 1;
         return;
       }
@@ -54,7 +54,7 @@ void handle_page_fault(struct trapframe* tf) {
       return;
     }
   }
-  cprintf("Segmentation FAULT, address: %p\n", rcr2());
+  cprintf("Segmentation Fault: %p\n", rcr2());
   myproc()->killed = 1;
 }
 

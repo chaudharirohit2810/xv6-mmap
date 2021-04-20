@@ -3,19 +3,21 @@
 #include "fcntl.h"
 #include "mmap.h"
 
-// Anonymous tests
-void anon_private_test(void);                       // Check private anonymous mappings
+// Anonymous tests (14 tests)
+void anon_private_test(void);                              // private anonymous mapping test
 void anon_shared_test(void);                               // Shared anonymous mapping test
-void anon_exceed_size_test(void);                          // Check when the mmap size exceeds KERNBASE
-void anon_exceed_count_test(void);                         // when mmap count exceeds 30 (mmap array limit)
-void anon_fork_test(void);                                 // Test for fork with anonymous mapping
-void anon_missing_flags_test(void);                        // Missing flags test
-void anon_given_addr_test(void);                           // Test when explicit address is provided
-void anon_invalid_addr_test(void);                         // When the address provided by user is less than MMAPBASE
-void anon_overlap_given_addr_test(void);                   // When the address is provided by user and it overlaps with existing mapping
-void anon_intermediate_given_addr_test(void);              // When the provided address can be mapped between two already provided address
-void anon_intermediate_given_addr_not_possible_test(void); // When the provided address is between two mappings but mapping is not possible due to size
-void anon_write_on_ro_mapping_test(void);                  // When there is only read permission on mapping but user tries to write
+void anon_private_fork_test(void);                         // Private anonymous mapping with fork test
+void anon_shared_multi_fork_test(void);                    // Shared mapping with multiple forks test
+void anon_exceed_size_test(void);                          // Mapping exceeds KERNBASE due to size test
+void anon_exceed_count_test(void);                         // Mapping count exceeds 30 (mmap array limit) test
+void anon_private_shared_fork_test(void);                  // Private & Shared anonymous mapping together with fork test
+void anon_missing_flags_test(void);                        // Invalid flags to mmap test
+void anon_given_addr_test(void);                           // Mapping with valid user provided address test
+void anon_invalid_addr_test(void);                         // Mapping with invalid user provided address test
+void anon_overlap_given_addr_test(void);                   // Mapping with user provided address overlapping with existing mapping test
+void anon_intermediate_given_addr_test(void);              // Mapping with user provided address can be fit between two existing mappings test
+void anon_intermediate_given_addr_not_possible_test(void); // Mapping with user provided address that cannot be fit between two existing mappings test
+void anon_write_on_ro_mapping_test(void);                  // Trying to write read only mapping test
 
 // Mmap tests
 void mmapMultiTest(int); // Check multiple private maps and munmaps
@@ -28,6 +30,9 @@ void mmapSharedWritableMappingTest(int fd); // the mapping is shared and there i
 void anonymous_tests(void) {
   anon_private_test();
   anon_shared_test();
+  anon_private_fork_test();
+  anon_shared_multi_fork_test();
+  anon_private_shared_fork_test();
   // anon_write_on_ro_mapping_test();
   anon_missing_flags_test();
   anon_exceed_count_test();
@@ -37,6 +42,17 @@ void anonymous_tests(void) {
   anon_overlap_given_addr_test();
   anon_intermediate_given_addr_test();
   anon_intermediate_given_addr_not_possible_test();
+}
+
+// Utility strcmp function
+int my_strcmp(const char *a, const char *b, int n) {
+  while (n > 0 && *a && *b) {
+    n--, a++, b++;
+  }
+  if (n == 0) {
+    return 0;
+  }
+  return 1;
 }
 
 int main(int args, char *argv[]) {
@@ -187,6 +203,7 @@ void mmapSharedWritableMappingTest(int fd) {
 void anon_missing_flags_test(void) {
   printf(1, "anonymous missing flags test\n");
   int size = 10000;
+  // Missing MAP_PRIVATE or MAP_SHARED flag
   int *ret = (int *)mmap((void *)0, size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS, -1, 0);
   if (ret != (void *)-1) {
     printf(1, "anonymous missing flags test failed\n");
@@ -272,7 +289,7 @@ void anon_shared_test(void) {
     for (int i = 0; i < size / 4; i++) {
       ret[i] = i;
     }
-		exit();
+    exit();
   } else {
     wait();
     for (int i = 0; i < size / 4; i++) {
@@ -287,6 +304,108 @@ void anon_shared_test(void) {
       exit();
     }
     printf(1, "anonymous shared mapping test ok\n");
+  }
+}
+
+// Shared mapping test with multiple forks
+void anon_shared_multi_fork_test(void) {
+  printf(1, "anonymous shared mapping with multiple forks test\n");
+  int size = 1000;
+  char *ret = mmap((void *)0, size, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0); // Shared mapping
+  if (ret == (void *)-1) {
+    printf(1, "anonymous shared mapping with multiple forks test failed\n");
+    exit();
+  }
+  char data[1000];
+  for (int i = 0; i < size; i++) {
+    data[i] = 'r';
+  }
+  int pid = fork();
+  if (pid == -1) {
+    printf(1, "anonymous shared mapping with multiple forks test failed: at fork\n");
+    exit();
+  }
+  if (pid == 0) { // 1st fork Child Process
+    for (int i = 0; i < size; i++) {
+      ret[i] = 'r';
+    }
+    int pid2 = fork();
+    if (pid2 == -1) {
+      printf(1, "anonymous shared mapping with multiple forks test failed: at fork\n");
+      exit();
+    }
+    if (pid2 == 0) { // 2nd fork Child Process
+      if (my_strcmp(data, ret, size) != 0) {
+        printf(1, "anonymous shared mapping with multiple forks test failed\n");
+        exit();
+      }
+      int pid3 = fork();
+      if (pid3 == -1) {
+        printf(1, "anonymous shared mapping with multiple forks test failed: at fork\n");
+        exit();
+      }
+      if (pid3 == 0) { // 3rd fork Child Process
+        if (my_strcmp(data, ret, size) != 0) {
+          printf(1, "anonymous shared mapping with multiple forks test failed\n");
+        }
+        exit();
+      } else { // 3rd fork Parent Process
+        wait();
+        if (my_strcmp(data, ret, size) != 0) {
+          printf(1, "anonymous shared mapping with multiple forks test failed\n");
+        }
+        exit();
+      }
+    } else { // 2nd fork Parent Process
+      wait();
+      if (my_strcmp(data, ret, size) != 0) {
+        printf(1, "anonymous shared mapping with multiple forks test failed\n");
+      }
+      exit();
+    }
+    exit();
+  } else { // 1st fork Parent process
+    wait();
+    if (my_strcmp(data, ret, size) != 0) {
+      printf(1, "anonymous shared mapping with multiple forks test failed\n");
+      exit();
+    }
+    int res = munmap((void *)ret, size);
+    if (res == -1) {
+      printf(1, "anonymous shared mapping with multiple forks test failed\n");
+      exit();
+    }
+    printf(1, "anonymous shared mapping with multiple forks test ok\n");
+  }
+}
+
+// Private mapping with fork
+void anon_private_fork_test(void) {
+  printf(1, "anonymous private mapping with fork test\n");
+  char temp[200];
+  for (int i = 0; i < 200; i++) {
+    temp[i] = 'a';
+  }
+  int size = 200;
+  char *ret = mmap((void *)0, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0); // Shared mapping
+  if (ret == (void *)-1) {
+    printf(1, "anonymous private mapping with fork test failed\n");
+    exit();
+  }
+  int pid = fork();
+  if (pid == 0) {
+    for (int i = 0; i < size; i++) {
+      ret[i] = 'a';
+    }
+    exit();
+  } else {
+    wait();
+    if (my_strcmp(temp, ret, size) == 0) {
+      printf(1, "anonymous private mapping with fork test failed\n");
+      exit();
+    }
+    printf(1, "anonymous private mapping with fork test ok\n");
+    munmap(ret, size);
   }
 }
 
@@ -319,36 +438,56 @@ void anon_write_on_ro_mapping_test(void) {
 }
 
 // fork syscall with anonymous mapping test
-void anon_fork_test(void) {
-  char *ret = mmap((void *)0, 200, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);  // Private mapping
-  int *ret2 = mmap((void *)0, 200, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 300); // Shared mapping
+void anon_private_shared_fork_test(void) {
+  printf(1, "anonymous private & shared mapping together with fork test\n");
+  int size = 200;
+  char data1[200], data2[200];
+  for (int i = 0; i < size; i++) {
+    data1[i] = 'a';
+    data2[i] = 'r';
+  }
+  char *ret = mmap((void *)0, 200, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0); // Private mapping
+  if (ret == (void *)-1) {
+    printf(1, "anonymous private & shared mapping together with fork test failed\n");
+    exit();
+  }
+  char *ret2 = mmap((void *)0, 200, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0); // Shared mapping
+  if (ret2 == (void *)-1) {
+    printf(1, "anonymous private & shared mapping together with fork test failed\n");
+    exit();
+  }
   int pid = fork();
   if (pid == 0) {
-    printf(1, "-------------Child process-----------\n");
-    for (int i = 0; i < 50; i++) {
+    for (int i = 0; i < size; i++) {
       ret[i] = 'a';
     }
-    printf(1, "Child Mapping 1:\n%s\n", ret);
-    printf(1, "Child Mapping 2:\n");
-    for (int i = 0; i < 50; i++) {
-      ret2[i] = i;
+    for (int i = 0; i < size; i++) {
+      ret2[i] = 'r';
     }
-    for (int i = 0; i < 50; i++) {
-      printf(1, "%d\t", ret2[i]);
-    }
-    printf(1, "\n");
+    exit();
   } else {
     wait();
-    printf(1, "\n\n------Parent process----------\n");
-    printf(1, "Parent Mapping 1:\n%s\n", ret);
-    printf(1, "Parent Mapping 2:\n");
-    for (int i = 0; i < 50; i++) {
-      ret2[i] = i;
+    // Private mapping
+    if (my_strcmp(ret, data1, size) == 0) {
+      printf(1, "anonymous private & shared mapping together with fork test failed\n");
+      exit();
     }
-    for (int i = 0; i < 50; i++) {
-      printf(1, "%d\t", ret2[i]);
+    // Shared mapping
+    if (my_strcmp(ret2, data2, size) != 0) {
+      printf(1, "anonymous private & shared mapping together with fork test failed\n");
+      exit();
     }
-    printf(1, "\n");
+    int res = munmap(ret, size);
+    if (res == -1) {
+      printf(1, "anonymous private & shared mapping together with fork test failed\n");
+      exit();
+    }
+    res = munmap(ret2, size);
+    if (res == -1) {
+      printf(1, "anonymous private & shared mapping together with fork test failed\n");
+      exit();
+    }
+    printf(1, "anonymous private & shared mapping together with fork test ok\n");
   }
 }
 

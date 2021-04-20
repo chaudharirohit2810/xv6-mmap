@@ -258,7 +258,6 @@ static int map_anon_main(struct proc *p, uint mmapaddr, int protection, int size
 // <!! -------------------------------------------------- Main Functions ------------------------------------ !!>
 int mmap_store_data(struct proc *p, int addr, int size, int flags, int protection, struct file *f, int offset) {
   if (!(flags & MAP_ANONYMOUS)) { // File backed mapping
-
     if (map_pagecache_page(p, f, addr, protection, offset, size) == -1) {
       return -1;
     }
