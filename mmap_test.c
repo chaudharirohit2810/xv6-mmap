@@ -4,7 +4,7 @@
 #include "mmap.h"
 
 // Anonymous tests
-void anon_private_test(void);                              // Check private anonymous mappings
+void anon_simple_private_test(void);                       // Check private anonymous mappings
 void anon_exceed_size_test(void);                          // Check when the mmap size exceeds KERNBASE
 void anon_exceed_count_test(void);                         // when mmap count exceeds 30 (mmap array limit)
 void anon_fork_test(void);                                 // Test for fork with anonymous mapping
@@ -16,13 +16,15 @@ void anon_intermediate_given_addr_test(void);              // When the provided 
 void anon_intermediate_given_addr_not_possible_test(void); // When the provided address is between two mappings but mapping is not possible due to size
 
 // Mmap tests
-void mmapMultiTest(int);                    // Check multiple private maps and munmaps
+void mmapMultiTest(int); // Check multiple private maps and munmaps
+void mmapWriteFileTest(int);
 void exceedCountMmapTest(int);              // Check when mmap region count exceeds
 void mmapPrivateFileMappingForkTest(int);   // Test for private file mapping with fork
 void mmapSharedFileMappingForkTest(int);    // Test for shared file mapping with fork
 void mmapSharedWritableMappingTest(int fd); // the mapping is shared and there is write permission on it but file is opened as read only
 
-void anonymous_test(void) {
+void anonymous_tests(void) {
+  anon_simple_private_test();
   anon_missing_flags_test();
   anon_exceed_count_test();
   anon_exceed_size_test();
@@ -39,19 +41,36 @@ int main(int args, char *argv[]) {
     printf(1, "File does not exist\n");
     exit();
   }
-  // mmapMultiTest(fd);
-  // anon_private_test();
-  // anon_missing_flags_test();
-  // anon_exceed_count_test();
-  // mmapPrivateFileMappingForkTest(fd);
-  // mmapSharedFileMappingForkTest(fd);
-  // mmapSharedWritableMappingTest(fd);
-  // anon_fork_test();
-  // anon_given_addr_test();
-  // anon_invalid_addr_test();
-  // anon_overlap_given_addr_test();
-  anonymous_test();
+  anonymous_tests();
   exit();
+}
+
+void mmapWriteFileTest(int fd) {
+  int size = 100;
+  char *ret = (char *)mmap((void *)0, size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
+  if (ret == (void *)-1) {
+    printf(1, "MMap failed\n");
+    exit();
+  }
+  ret[99] = '\0';
+  printf(1, "Data: %s\n", ret);
+  char a[100];
+  for (int i = 0; i < 100; i++)
+    a[i] = 'a';
+  char b[200];
+  read(fd, b, 200); // Just to use as lseek
+  // Write some data to file
+  write(fd, a, 100);
+  write(fd, a, 100);
+  char *ret2 = (char *)mmap((void *)0, size * 2, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 100);
+  if (ret2 == (void *)-1) {
+    printf(1, "MMap failed\n");
+    exit();
+  }
+  ret2[199] = '\0';
+  printf(1, "Data: %s\n", ret2);
+  munmap(ret, size);
+  munmap(ret2, size * 2);
 }
 
 // ----------------------------------- Test to check multiple private maps and munmaps ---------------------------------------------
@@ -215,23 +234,24 @@ void anon_exceed_count_test(void) {
   }
 }
 
-// Private anonymous mapping
-void anon_private_test(void) {
+// Simple private anonymous mapping test with maping having both read and write permission and size greater than two pages
+void anon_simple_private_test(void) {
+  printf(1, "anonymous simple private mapping test\n");
   int size = 10000;
   int *ret = (int *)mmap((void *)0, size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   if (ret == (void *)-1) {
-    printf(1, "Mmap failed!!\n");
+    printf(1, "anonymous simple private mapping test failed\n");
     exit();
   }
   for (int i = 0; i < size / 4; i++) {
     ret[i] = i;
   }
-  for (int i = 0; i < size / 4; i++) {
-    printf(1, "%d\t", ret[i]);
-  }
-  printf(1, "\n");
   int res = munmap((void *)ret, size);
-  printf(1, "munmap return value: %d\n", res);
+  if (res == -1) {
+    printf(1, "anonymous simple private mapping test failed\n");
+    exit();
+  }
+  printf(1, "anonymous simple private mapping test ok\n");
 }
 
 // fork syscall with anonymous mapping test

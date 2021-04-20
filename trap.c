@@ -41,13 +41,14 @@ void handle_page_fault() {
 
     if (page_fault_addr >= start && page_fault_addr <= end) {
       int size = PGSIZE > p->mmaps[i].size - p->mmaps[i].stored_size ? p->mmaps[i].size - p->mmaps[i].stored_size : PGSIZE;
-      if (mmap_store_data(p, page_fault_addr, size, p->mmaps[i].flags, p->mmaps[i].protection, p->mmaps[i].f, p->mmaps[i].offset) < 0) {
+      if (mmap_store_data(p, PGROUNDDOWN(page_fault_addr), size, p->mmaps[i].flags, p->mmaps[i].protection, p->mmaps[i].f, p->mmaps[i].offset) < 0) {
         myproc()->killed = 1;
       }
       p->mmaps[i].stored_size += PGSIZE;
       return;
     }
   }
+	cprintf("Segmentation FAULT, address: %p\n", rcr2()); 
   myproc()->killed = 1;
 }
 
@@ -90,16 +91,18 @@ trap(struct trapframe *tf)
     uartintr();
     lapiceoi();
     break;
-	case 14: // Page fault
-		handle_page_fault();
-		break;
+
   case T_IRQ0 + 7:
   case T_IRQ0 + IRQ_SPURIOUS:
     cprintf("cpu%d: spurious interrupt at %x:%x\n",
             cpuid(), tf->cs, tf->eip);
     lapiceoi();
     break;
-
+  case 14: // Page fault caused by mmap
+    if (rcr2() >= MMAPBASE) {
+      handle_page_fault();
+      break;
+    }
   //PAGEBREAK: 13
   default:
     if(myproc() == 0 || (tf->cs&3) == 0){

@@ -102,6 +102,7 @@ void print_maps(struct proc*);
 // pagecache.c
 void 						pagecacheinit(void);
 char 						*getPage(struct inode *, int, int, int);
+void updatePage(int , int , int, char* , int); 
 
 // picirq.c
 void            picenable(int);
