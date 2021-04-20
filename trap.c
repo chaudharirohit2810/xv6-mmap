@@ -35,7 +35,6 @@ idtinit(void)
 void handle_page_fault() {
   struct proc *p = myproc();
   uint page_fault_addr = rcr2();
-  cprintf("Page fault address: %p   Total maps: %d\n", page_fault_addr, p->total_mmaps);
   for (int i = 0; i < p->total_mmaps; i++) {
     uint start = p->mmaps[i].virt_addr;
     uint end = start + p->mmaps[i].size;

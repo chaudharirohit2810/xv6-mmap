@@ -97,6 +97,7 @@ int my_munmap(struct proc *, int , int );                                       
 int copy_maps(struct proc *, struct proc *);
 int mmap_store_data(struct proc *, int, int, int, int, struct file *, int);
 void delete_mmaps(struct proc*);  // Delete all the mappings
+void print_maps(struct proc*);
 
 // pagecache.c
 void 						pagecacheinit(void);

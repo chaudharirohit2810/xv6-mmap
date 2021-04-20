@@ -4,16 +4,16 @@
 #include "mmap.h"
 
 // Anonymous tests
-void anon_private_test(void);                         // Check private anonymous mappings
-void anon_exceed_size_test(void);                     // Check when the mmap size exceeds KERNBASE
-void anon_exceed_count_test(void);                    // when mmap count exceeds 30 (mmap array limit)
-void anon_fork_test(void);                            // Test for fork with anonymous mapping
-void anon_missing_flags_test(void);                   // Missing flags test
-void anon_given_addr_test(void);                      // Test when explicit address is provided
-void anon_invalid_addr_test(void);                    // When the address provided by user is less than MMAPBASE
-void anon_overlap_given_addr_test(void);              // When the address is provided by user and it overlaps with existing mapping
-void anon_between_given_addr_test(void);              // When the provided address can be mapped between two already provided address
-void anon_between_given_addr_not_possible_test(void); // When the provided address is between two mappings but mapping is not possible due to size
+void anon_private_test(void);                              // Check private anonymous mappings
+void anon_exceed_size_test(void);                          // Check when the mmap size exceeds KERNBASE
+void anon_exceed_count_test(void);                         // when mmap count exceeds 30 (mmap array limit)
+void anon_fork_test(void);                                 // Test for fork with anonymous mapping
+void anon_missing_flags_test(void);                        // Missing flags test
+void anon_given_addr_test(void);                           // Test when explicit address is provided
+void anon_invalid_addr_test(void);                         // When the address provided by user is less than MMAPBASE
+void anon_overlap_given_addr_test(void);                   // When the address is provided by user and it overlaps with existing mapping
+void anon_intermediate_given_addr_test(void);              // When the provided address can be mapped between two already provided address
+void anon_intermediate_given_addr_not_possible_test(void); // When the provided address is between two mappings but mapping is not possible due to size
 
 // Mmap tests
 void mmapMultiTest(int);                    // Check multiple private maps and munmaps
@@ -21,6 +21,17 @@ void exceedCountMmapTest(int);              // Check when mmap region count exce
 void mmapPrivateFileMappingForkTest(int);   // Test for private file mapping with fork
 void mmapSharedFileMappingForkTest(int);    // Test for shared file mapping with fork
 void mmapSharedWritableMappingTest(int fd); // the mapping is shared and there is write permission on it but file is opened as read only
+
+void anonymous_test(void) {
+  anon_missing_flags_test();
+  anon_exceed_count_test();
+  anon_exceed_size_test();
+  anon_given_addr_test();
+  anon_invalid_addr_test();
+  anon_overlap_given_addr_test();
+  anon_intermediate_given_addr_test();
+  anon_intermediate_given_addr_not_possible_test();
+}
 
 int main(int args, char *argv[]) {
   int fd = open(argv[1], O_RDWR);
@@ -39,8 +50,7 @@ int main(int args, char *argv[]) {
   // anon_given_addr_test();
   // anon_invalid_addr_test();
   // anon_overlap_given_addr_test();
-  // anon_between_given_addr_test();
-  anon_between_given_addr_not_possible_test();
+  anonymous_test();
   exit();
 }
 
@@ -150,39 +160,58 @@ void mmapSharedWritableMappingTest(int fd) {
 
 // <!! ------------------------------------------ Anonymous mappings test -------------------------------------------------- !!>
 
-// Missing flags Test
+// Missing flags Test: Missing MAP_PRIVATE or MAP_SHARED in flags
 void anon_missing_flags_test(void) {
+  printf(1, "anonymous missing flags test\n");
   int size = 10000;
   int *ret = (int *)mmap((void *)0, size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS, -1, 0);
-  if (ret == (void *)-1) {
-    printf(1, "Mmap failed!!\n");
+  if (ret != (void *)-1) {
+    printf(1, "anonymous missing flags test failed\n");
+    munmap((void *)ret, size);
     exit();
   }
-  int res = munmap((void *)ret, size);
-  printf(1, "munmap return value: %d\n", res);
+  printf(1, "anonymous missing flags test ok\n");
 }
 
-// anonymous mapping exceeds KERNBASE
+// anonymous mapping when size exceeds KERNBASE
 void anon_exceed_size_test(void) {
-  int size = 50960000;
+  printf(1, "anonymous exceed mapping size test\n");
+  int size = 600 * 1024 * 1024; // 600 MB
   char *ret = (char *)mmap((void *)0, size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-  printf(1, "Return address: %p\n", ret);
-  if (ret == (void *)-1) {
-    printf(1, "Mmap failed!!\n");
+  if (ret != (void *)-1) {
+    printf(1, "anonymous exceed mapping size test failed\n");
+    munmap((void *)ret, size);
     exit();
   }
-  munmap((void *)ret, size);
+  printf(1, "anonymous exceed mapping size test ok\n");
 }
 
 // anonymous mapping count test when it exceeds 30
 void anon_exceed_count_test(void) {
+  printf(1, "anonymous exceed mapping count test\n");
   int size = 5096;
-  for (int i = 0; i < 50; i++) {
+  int count = 50;
+  uint arr[50];
+  int i = 0;
+  for (; i < count; i++) {
     void *ret = mmap((void *)0, size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+    arr[i] = (uint)ret;
     if (ret == (void *)-1) {
-      printf(1, "Mmap failed! iteration: %d\n", i);
-      return;
+      break;
     }
+  }
+  if (i == 30) {
+    printf(1, "anonymous exceed mapping count test ok\n");
+    for (int j = 0; j < i; j++) {
+      int ret = munmap((void *)arr[j], size);
+      if (ret == -1) {
+        printf(1, "anonymous exceed mapping count test failed: at %d munmap\n", j);
+        exit();
+      }
+    }
+  } else {
+    printf(1, "anonymous exceed mapping count test failed: %d total mappings\n", i);
+    exit();
   }
 }
 
@@ -239,83 +268,122 @@ void anon_fork_test(void) {
   }
 }
 
-// mmap when the address is provided by user
+// mmap when the valid address is provided by user
 void anon_given_addr_test(void) {
+  printf(1, "anonymous valid provided address test\n");
   char *ret = (char *)mmap((void *)0x60001000, 200, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
   if (ret == (void *)-1) {
-    printf(1, "Mmap failed\n");
-    return;
+    printf(1, "anonymous valid provided address test failed: at mmap\n");
+    exit();
   }
-  printf(1, "Returned address: %p\n", ret);
+  int res = munmap(ret, 200);
+  if (res == -1) {
+    printf(1, "anonymous valid provided address test failed: at munmap\n");
+    exit();
+  }
+  printf(1, "anonymous valid provided address test ok\n");
 }
 
 // mmap when provided address is less than MMAPBASE
 void anon_invalid_addr_test(void) {
+  printf(1, "anonymous invalid provided address test\n");
   char *ret = (char *)mmap((void *)0x50001000, 200, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-  if (ret == (void *)-1) {
-    printf(1, "Mmap failed\n");
-    return;
+  if (ret != (void *)-1) {
+    printf(1, "anonymous invalid provided address test failed\n");
+    munmap(ret, 200);
+    exit();
   }
-  printf(1, "Returned address: %p\n", ret);
+  printf(1, "anonymous invalid provided address test ok\n");
 }
 
-// mmap when the address is provided by user and it overlaps with existing address
+// test when the address is provided by user and it overlaps with existing address
 void anon_overlap_given_addr_test(void) {
+  printf(1, "anonymous overlapping provided address test\n");
   char *ret = (char *)mmap((void *)0x60001000, 10000, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
   if (ret == (void *)-1) {
-    printf(1, "Mmap failed\n");
-    return;
+    printf(1, "anonymous overlapping provided address test failed: at first mmap\n");
+    exit();
   }
-  printf(1, "Returned address: %p\n", ret);
-  ret = (char *)mmap((void *)0x60001000, 200, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-  if (ret == (void *)-1) {
-    printf(1, "Mmap failed\n");
-    return;
+  char *ret2 = (char *)mmap((void *)0x60001000, 200, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  if (ret2 == (void *)-1 || ret2 == (void *)0x60001000) {
+    printf(1, "anonymous overlapping provided address test failed: at second mmap\n");
+    exit();
   }
-  printf(1, "Returned address: %p\n", ret);
+  int res = munmap(ret, 10000);
+  if (res == -1) {
+    printf(1, "anonymous overlapping provided address test failed: at first munmap\n");
+    exit();
+  }
+  res = munmap(ret2, 200);
+  if (res == -1) {
+    printf(1, "anonymous overlapping provided address test failed: at first munmap\n");
+    exit();
+  }
+  printf(1, "anonymous overlapping provided address test ok\n");
 }
 
-// mmap when the mapping is possible between two mappings
-void anon_between_given_addr_test(void) {
+// test when the mapping is possible between two mappings
+void anon_intermediate_given_addr_test(void) {
+  printf(1, "anonymous intermediate provided address test\n");
   char *ret = (char *)mmap((void *)0, 1000, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
   if (ret == (void *)-1) {
-    printf(1, "First Mmap failed\n");
-    return;
+    printf(1, "anonymous intermediate provided address test failed: failed at first mmap\n");
+    exit();
   }
-  printf(1, "First Returned address: %p\n", ret);
-  ret = (char *)mmap((void *)0x60003000, 200, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-  if (ret == (void *)-1) {
-    printf(1, "Second Mmap failed\n");
-    return;
+  char *ret2 = (char *)mmap((void *)0x60003000, 200, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  if (ret2 == (void *)-1) {
+    printf(1, "anonymous intermediate provided address test failed: failed at second mmap\n");
+    munmap(ret, 1000);
+    exit();
   }
-  printf(1, "Second Returned address: %p\n", ret);
-  ret = (char *)mmap((void *)0x60000100, 1000, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-  if (ret == (void *)-1) {
-    printf(1, "Third Mmap failed\n");
-    return;
+  char *ret3 = (char *)mmap((void *)0x60000100, 1000, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  if (ret3 != (void *)0x60001000) {
+    printf(1, "anonymous intermediate provided address test failed: failed at third mmap\n");
+    munmap(ret, 1000);
+    munmap(ret2, 200);
+    exit();
   }
-  printf(1, "Third Returned address: %p\n", ret);
+  int res = munmap(ret, 1000);
+  if (res == -1) {
+    printf(1, "anonymous overlapping provided address test failed: at first munmap\n");
+    munmap(ret2, 200);
+    munmap(ret3, 1000);
+    exit();
+  }
+  res = munmap(ret2, 200);
+  if (res == -1) {
+    printf(1, "anonymous overlapping provided address test failed: at second munmap\n");
+    munmap(ret3, 1000);
+    exit();
+  }
+  res = munmap(ret3, 1000);
+  if (res == -1) {
+    printf(1, "anonymous overlapping provided address test failed: at third munmap\n");
+    exit();
+  }
+  printf(1, "anonymous intermediate provided address test ok\n");
 }
 
-// mmap when the mapping is possible between two mappings
-void anon_between_given_addr_not_possible_test(void) {
+// mmap when the mapping is not possible between two mappings
+void anon_intermediate_given_addr_not_possible_test(void) {
+  printf(1, "anonymous intermediate provided address not possible test\n");
   char *ret = (char *)mmap((void *)0, 1000, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
   if (ret == (void *)-1) {
-    printf(1, "First Mmap failed\n");
-    return;
+    printf(1, "anonymous intermediate provided address not possible test failed: failed at first mmap\n");
+    exit();
   }
-  printf(1, "First Returned address: %p\n", ret);
-  ret = (char *)mmap((void *)0x60003000, 200, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-  if (ret == (void *)-1) {
-    printf(1, "Second Mmap failed\n");
-    return;
+  char *ret2 = (char *)mmap((void *)0x60003000, 200, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  if (ret2 == (void *)-1) {
+    printf(1, "anonymous intermediate provided address not possible test failed: failed at second mmap\n");
+    exit();
   }
-  printf(1, "Second Returned address: %p\n", ret);
-  // This mapping is not possible so mmap should pick a address
-  ret = (char *)mmap((void *)0x60000100, 10000, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-  if (ret == (void *)-1) {
-    printf(1, "Third Mmap failed\n");
-    return;
+  char *ret3 = (char *)mmap((void *)0x60000100, 10000, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  if (ret3 == (void *)0x60000100) {
+    printf(1, "anonymous intermediate provided address not possible test failed: failed at third mmap\n");
+    exit();
   }
-  printf(1, "Third Returned address: %p\n", ret);
+  munmap(ret, 1000);
+  munmap(ret2, 200);
+  munmap(ret3, 10000);
+  printf(1, "anonymous intermediate provided address not possible test ok\n");
 }
