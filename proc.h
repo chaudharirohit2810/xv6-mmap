@@ -33,14 +33,15 @@ struct context {
 };
 
 struct mmap_region {
-  uint virt_addr;  // Virtual address of mapping
-  uint size;       // Size of mapping
-  int flags;       // Flags on mapping
-  int protection;  // Read, write, exec protections for the pages
-  struct file *f;  // File structure if mapping is not anonymous
-  int offset;      // File offset if mapping is not anonymous
-  int ref_count;   // 1 if the mapping is shared and process is child
-  int stored_size; // If any page is mapped corresponding to this address
+  uint virt_addr;    // Virtual address of mapping
+  uint size;         // Size of mapping
+  int flags;         // Flags on mapping
+  int protection;    // Read, write, exec protections for the pages
+  struct file *f;    // File structure if mapping is not anonymous
+  int offset;        // File offset if mapping is not anonymous
+  int ref_count;     // 1 if the mapping is shared and process is child
+  int stored_size;   // If any page is mapped corresponding to this address
+  int unmapped_size; // Total unmapped size
 };
 
 enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };

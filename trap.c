@@ -37,7 +37,7 @@ void handle_page_fault(struct trapframe *tf) {
   struct proc *p = myproc();
   uint page_fault_addr = rcr2();
   for (int i = 0; i < p->total_mmaps; i++) {
-    uint start = p->mmaps[i].virt_addr;
+    uint start = p->mmaps[i].virt_addr + p->mmaps[i].unmapped_size;
     uint end = start + p->mmaps[i].size;
     if (page_fault_addr >= start && page_fault_addr <= end) {
       pde_t *pte;

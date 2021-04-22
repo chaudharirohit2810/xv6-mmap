@@ -314,6 +314,7 @@ void *my_mmap(int addr, struct file *f, int size, int offset, int flags, int pro
 int my_munmap(struct proc *p, int addr, int size) {
   pte_t *pte;
   uint mainaddr = PGROUNDUP(addr);
+  int unmapping_size = PGROUNDUP(size);
   int i = 0;
   int total_size = 0;
   // Find the mmap entry
@@ -340,8 +341,8 @@ int my_munmap(struct proc *p, int addr, int size) {
   }
   // Free the allocated page
   int currsize = 0;
-  for (; currsize < p->mmaps[i].stored_size; currsize += PGSIZE) {
-    uint tempaddr = addr + currsize;
+  for (; currsize < unmapping_size; currsize += PGSIZE) {
+    uint tempaddr = addr + currsize + p->mmaps[i].unmapped_size;
     uint pa = get_physical_page(p, tempaddr, &pte);
     if (pa == 0) {
       // Page was not mapped yet
@@ -353,13 +354,18 @@ int my_munmap(struct proc *p, int addr, int size) {
     kfree(v);
     *pte = 0;
   }
-  zero_mmap_region_struct(&p->mmaps[i]);
-  // Left shift the mmap array
-  while (i < 30 && p->mmaps[i + 1].virt_addr) {
-    copy_mmap_struct(&p->mmaps[i], &p->mmaps[i + 1]);
-    i += 1;
+  if (p->mmaps[i].size <= unmapping_size) {
+    zero_mmap_region_struct(&p->mmaps[i]);
+    // Left shift the mmap array
+    while (i < 30 && p->mmaps[i + 1].virt_addr) {
+      copy_mmap_struct(&p->mmaps[i], &p->mmaps[i + 1]);
+      i += 1;
+    }
+    p->total_mmaps -= 1;
+  } else {
+    p->mmaps[i].unmapped_size += unmapping_size;
+    p->mmaps[i].size -= unmapping_size;
   }
-  p->total_mmaps -= 1;
   return 0;
 }
 
