@@ -35,16 +35,16 @@ void exceedCountMmapTest(int);              // Check when mmap region count exce
 void mmapPrivateFileMappingForkTest(int);   // Test for private file mapping with fork
 void mmapSharedFileMappingForkTest(int);    // Test for shared file mapping with fork
 void mmapSharedWritableMappingTest(int fd); // the mapping is shared and there is write permission on it but file is opened as read only
+void anon_private_test_when_munmap_size_is_not_total();
 
 void file_tests(int fd) {
   file_invalid_fd_test();
   file_invalid_flags_test();
-	file_writeable_shared_mapping_on_ro_file_test();
+  file_writeable_shared_mapping_on_ro_file_test();
   file_ro_shared_mapping_on_ro_file_test();
-	file_private_mapping_perm_test();
-	file_exceed_size_test();
-	file_exceed_count_test();
-
+  file_private_mapping_perm_test();
+  file_exceed_size_test();
+  file_exceed_count_test();
 }
 
 void anonymous_tests(void) {
@@ -81,9 +81,34 @@ int main(int args, char *argv[]) {
     printf(1, "File does not exist\n");
     exit();
   }
-  file_tests(fd);
-  anonymous_tests();
+  // file_tests(fd);
+  // anonymous_tests();
+  anon_private_test_when_munmap_size_is_not_total();
   exit();
+}
+
+// Simple private anonymous mapping test with maping having both read and write permission and size greater than two pages
+void anon_private_test_when_munmap_size_is_not_total() {
+  printf(1, "anonymous private mapping test\n");
+  int size = 10000;
+  int *ret = (int *)mmap((void *)0, size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+  if (ret == (void *)-1) {
+    printf(1, "anonymous private mapping test failed\n");
+    exit();
+  }
+  for (int i = 0; i < size / 4; i++) {
+    ret[i] = i;
+  }
+  int res = munmap((void *)ret, 5);
+  res = munmap((void *)ret, 5);
+  for (int i = 2048; i < size / 4; i++) {
+    printf(1, "%d\n", ret[i]);
+  }
+  if (res == -1) {
+    printf(1, "anonymous private mapping test failed\n");
+    exit();
+  }
+  printf(1, "anonymous private mapping test ok\n");
 }
 
 // <!!-------------------------------------------------- File Backed mapping -------------------------------------------------- !!>
@@ -127,7 +152,7 @@ void file_writeable_shared_mapping_on_ro_file_test() {
   char *ret = mmap((void *)0, 200, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
   if (ret == (void *)-1) {
     printf(1, "file backed writeable shared mapping on read only file test ok\n");
-		close(fd);
+    close(fd);
     return;
   }
   printf(1, "file backed writeable shared mapping on read only file test failed\n");
@@ -144,16 +169,16 @@ void file_ro_shared_mapping_on_ro_file_test() {
   }
   char *ret = mmap((void *)0, 200, PROT_READ, MAP_SHARED, fd, 0);
   if (ret == (void *)-1) {
- 	  printf(1, "file backed read only shared mapping on read only file test failed\n");
-  	exit();
+    printf(1, "file backed read only shared mapping on read only file test failed\n");
+    exit();
   }
   printf(1, "file backed read only shared mapping on read only file test ok\n");
-	int res = munmap(ret, 200);
-	if(res == -1) {
-		printf(1, "file backed read only shared mapping on read only file test failed\n");
-  	exit();
-	}
-	close(fd);
+  int res = munmap(ret, 200);
+  if (res == -1) {
+    printf(1, "file backed read only shared mapping on read only file test failed\n");
+    exit();
+  }
+  close(fd);
 }
 
 // Mapping permissions test on private file backed mapping
@@ -161,36 +186,36 @@ void file_private_mapping_perm_test() {
   printf(1, "file backed private mapping permission test\n");
   int fd = open("README", O_RDONLY);
   if (fd == -1) {
-  	printf(1, "file backed private mapping permission test failed\n");
+    printf(1, "file backed private mapping permission test failed\n");
     exit();
   }
-	// read only private mapping on read only opened file
+  // read only private mapping on read only opened file
   char *ret = mmap((void *)0, 200, PROT_READ, MAP_PRIVATE, fd, 0);
   if (ret == (void *)-1) {
-  	printf(1, "file backed private mapping permission test failed\n");
-  	exit();
+    printf(1, "file backed private mapping permission test failed\n");
+    exit();
   }
   // write & read private mapping on read only opened file
-	char *ret2 = mmap((void *)0, 200, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
+  char *ret2 = mmap((void *)0, 200, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
   if (ret2 == (void *)-1) {
-  	printf(1, "file backed private mapping permission test failed\n");
-  	exit();
+    printf(1, "file backed private mapping permission test failed\n");
+    exit();
   }
-	for(int i = 0; i < 20; i++) {
-		ret2[i] = 'a';
-	}
-	int res = munmap(ret, 200);
-	if(res == -1) {
-  	printf(1, "file backed private mapping permission test failed\n");
-  	exit();
-	}
-	res = munmap(ret2, 200);
-	if(res == -1) {
-  	printf(1, "file backed private mapping permission test failed\n");
-  	exit();
-	}
+  for (int i = 0; i < 20; i++) {
+    ret2[i] = 'a';
+  }
+  int res = munmap(ret, 200);
+  if (res == -1) {
+    printf(1, "file backed private mapping permission test failed\n");
+    exit();
+  }
+  res = munmap(ret2, 200);
+  if (res == -1) {
+    printf(1, "file backed private mapping permission test failed\n");
+    exit();
+  }
   printf(1, "file backed private mapping permission test ok\n");
-	close(fd);
+  close(fd);
 }
 
 // file backend mapping when size exceeds KERNBASE
