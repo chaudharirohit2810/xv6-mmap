@@ -446,12 +446,10 @@ sys_pipe(void)
 
 // implementation of mmap system call
 int sys_mmap(void) {
-
   // <!!------------------------- Arguements of system call -----------------------!!>
   int addr, size, protection, flags, offset;
   int fd;
   struct file *f;
-
   // <!!----------------------------Getting the arguements-------------------------!!>
   // Integer arguements
   if (argint(1, &size) < 0 || argint(2, &protection) < 0 || argint(3, &flags) < 0 || argint(5, &offset) < 0) {
@@ -467,15 +465,6 @@ int sys_mmap(void) {
       return -1;
     }
   }
-
-  // <!!-------------------------------- Debugging-----------------------------------------!!>
-  int development = 0;
-  if (development == 1) {
-    cprintf("\nArguements are:\n");
-    cprintf("Size:%d  Protection:%d  Flags:%d  Offset:%d\n", size, protection, flags, offset);
-    cprintf("Pointer address: %p\n\n", addr);
-  }
-
   return (int)my_mmap(addr, f, size, offset, flags, protection);
 }
 
