@@ -14,6 +14,10 @@ void file_ro_shared_mapping_on_ro_file_test();        // read only shared mappin
 void file_exceed_size_test();                         // File backed mapping size exceeds KERNBASE
 void file_exceed_count_test();                        // File backend mapping count exceeds mmap array limit
 void file_private_mapping_perm_test();                // Mapping permissions test on private file backed mapping
+void file_pagecache_coherency_test();                 // Check if pagecache is updated after file write
+void file_private_with_fork_test();                   // Private file mapping with fork test
+void file_shared_with_fork_test();                    // Shared file mapping with fork test
+void file_mapping_with_offset_test();                 // Private file mapping with some offset test
 
 // Anonymous tests (14 tests)
 void anon_private_test();                              // private anonymous mapping test
@@ -32,14 +36,9 @@ void anon_intermediate_given_addr_not_possible_test(); // Mapping with user prov
 void anon_write_on_ro_mapping_test();                  // Trying to write read only mapping test
 
 // Mmap tests
-void mmapMultiTest(int); // Check multiple private maps and munmaps
-void mmapWriteFileTest(int);
-void mmapPrivateFileMappingForkTest(int);   // Test for private file mapping with fork
-void mmapSharedFileMappingForkTest(int);    // Test for shared file mapping with fork
-void mmapSharedWritableMappingTest(int fd); // the mapping is shared and there is write permission on it but file is opened as read only
 void anon_private_test_when_munmap_size_is_not_total();
 
-void file_tests(int fd) {
+void file_tests() {
   file_invalid_fd_test();
   file_invalid_flags_test();
   file_writeable_shared_mapping_on_ro_file_test();
@@ -49,6 +48,10 @@ void file_tests(int fd) {
   file_exceed_count_test();
   file_private_test();
   file_shared_test();
+  file_pagecache_coherency_test();
+  file_private_with_fork_test();
+  file_shared_with_fork_test();
+	file_mapping_with_offset_test();
 }
 
 void anonymous_tests(void) {
@@ -79,12 +82,7 @@ int my_strcmp(const char *a, const char *b, int n) {
 }
 
 int main(int args, char *argv[]) {
-  int fd = open(filename, O_RDWR);
-  if (fd == -1) {
-    printf(1, "File does not exist\n");
-    exit();
-  }
-  file_tests(fd);
+  file_tests();
   anonymous_tests();
   exit();
 }
@@ -334,6 +332,52 @@ void file_private_test() {
   printf(1, "file backed private mapping test ok\n");
 }
 
+// Simple private file backed mapping test
+void file_mapping_with_offset_test() {
+  printf(1, "file backed mapping with offset test\n");
+  int fd = open(filename, O_RDWR);
+  if (fd == -1) {
+    printf(1, "file backed mapping with offset test failed: at open\n");
+    exit();
+  }
+  int size = 1000;
+  char buf[1000];
+  int n = read(fd, buf, 200); // Move to offset 200
+  if (n != 200) {
+    printf(1, "file backed mapping with offset test failed: at read\n");
+    exit();
+  }
+	if(read(fd, buf, size) != size) {
+    printf(1, "file backed mapping with offset test failed: at read\n");
+    exit();
+	}
+	// Offset is 200
+  char *ret = (char *)mmap((void *)0, size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 200);
+  if (ret == (void *)-1) {
+    printf(1, "file backed mapping with offset test failed\n");
+    exit();
+  }
+  if (my_strcmp(buf, ret, size) != 0) {
+    printf(1, "file backed mapping with offset test failed\n");
+    exit();
+  }
+  for (int i = 0; i < 40; i++) {
+    ret[i] = 'p';
+    buf[i] = 'p';
+  }
+  if (my_strcmp(buf, ret, size) != 0) {
+    printf(1, "file backed mapping with offset test failed\n");
+    exit();
+  }
+  int res = munmap((void *)ret, size);
+  if (res == -1) {
+    printf(1, "file backed mapping with offset test failed\n");
+    exit();
+  }
+  close(fd);
+  printf(1, "file backed mapping with offset test ok\n");
+}
+
 // Shared file backed mapping test
 void file_shared_test() {
   printf(1, "file backed shared mapping test\n");
@@ -390,110 +434,174 @@ void file_shared_test() {
   printf(1, "file backed shared mapping test ok\n");
 }
 
-void mmapWriteFileTest(int fd) {
+// Check if pagecache is updated after write to file
+void file_pagecache_coherency_test() {
+  printf(1, "file backed mapping pagecache coherency test\n");
   int size = 100;
-  char *ret = (char *)mmap((void *)0, size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
-  if (ret == (void *)-1) {
-    printf(1, "MMap failed\n");
+  int fd = open(filename, O_RDWR);
+  if (fd == -1) {
+    printf(1, "file backed mapping pagecache coherency test failed: at open\n");
     exit();
   }
-  ret[99] = '\0';
-  printf(1, "Data: %s\n", ret);
+  char buf[100];
+  int n = read(fd, buf, size);
+  if (n != size) {
+    printf(1, "file backed mapping pagecache coherency test failed: at read\n");
+    exit();
+  }
+  char *ret = (char *)mmap((void *)0, size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
+  if (ret == (void *)-1) {
+    printf(1, "file backed mapping pagecache coherency test failed\n");
+    exit();
+  }
+  if (my_strcmp(buf, ret, size) != 0) {
+    printf(1, "file backed mapping pagecache coherency test failed\n");
+    exit();
+  }
   char a[100];
   for (int i = 0; i < 100; i++)
     a[i] = 'a';
-  char b[200];
-  read(fd, b, 200); // Just to use as lseek
-  // Write some data to file
-  write(fd, a, 100);
-  write(fd, a, 100);
-  char *ret2 = (char *)mmap((void *)0, size * 2, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 100);
+  // Write some data to file at offset equal to size
+  n = write(fd, a, size);
+  if (n != size) {
+    printf(1, "file backed mapping pagecache coherency test failed: at filewrite\n");
+    exit();
+  }
+  close(fd);
+  int fd2 = open(filename, O_RDWR); // Again open file just to seek to start
+  if (fd2 == -1) {
+    printf(1, "file backed mapping pagecache coherency test failed: at open\n");
+    exit();
+  }
+  n = read(fd2, buf, size); // For the lseek
+  if (n != size) {
+    printf(1, "file backed mapping pagecache coherency test failed: at read\n");
+    exit();
+  }
+  n = read(fd2, buf, size); // Read from the file at offset size
+  if (n != size) {
+    printf(1, "file backed mapping pagecache coherency test failed: at read\n");
+    exit();
+  }
+  char *ret2 = (char *)mmap((void *)0, size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd2, 100);
   if (ret2 == (void *)-1) {
-    printf(1, "MMap failed\n");
+    printf(1, "file backed mapping pagecache coherency test failed: at mmap\n");
     exit();
   }
-  ret2[199] = '\0';
-  printf(1, "Data: %s\n", ret2);
-  munmap(ret, size);
-  munmap(ret2, size * 2);
-}
-
-// ----------------------------------- Test to check multiple private maps and munmaps ---------------------------------------------
-void mmapMultiTest(int fd) {
-  int size = 5096;
-  char *ret = (char *)mmap((void *)0, size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 100);
-  if (ret == (void *)-1) {
-    printf(1, "Mmap failed!!\n");
+  if (my_strcmp(ret2, buf, size) != 0) {
+    printf(1, "file backed mapping pagecache coherency test failed\n");
     exit();
   }
-  char *ret2 = (char *)mmap((void *)0, size * 2, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
-  if (ret2 == (void *)-1) {
-    printf(1, "Mmap failed!!\n");
+  int res = munmap(ret, size);
+  if (res == -1) {
+    printf(1, "file backed mapping pagecache coherency test failed\n");
     exit();
   }
-  for (int i = 0; i < 10; i++) {
-    ret2[i] = 'a';
-  }
-  // 3rd mmap
-  ret = (char *)mmap((void *)0x70000000, size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 100);
-  if (ret == (void *)-1) {
-    printf(1, "Mmap failed!!\n");
+  res = munmap(ret2, size);
+  if (res == -1) {
+    printf(1, "file backed mapping pagecache coherency test failed\n");
     exit();
   }
-  munmap((void *)ret2, size * 2);
-  ret = (char *)mmap((void *)0, size * 3, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 100);
-  if (ret == (void *)-1) {
-    printf(1, "Mmap failed!!\n");
-    exit();
-  }
-  ret = (char *)mmap((void *)0, size * 2, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 100);
-  if (ret == (void *)-1) {
-    printf(1, "Mmap failed!!\n");
-    exit();
-  }
-  munmap((void *)ret, size);
+  printf(1, "file backed mapping pagecache coherency test ok\n");
+  close(fd2);
 }
 
 // ------------------------------------------------- private file backed mapping with fork test -------------------------------------------------------
-void mmapPrivateFileMappingForkTest(int fd) {
-  printf(1, "Fork with private mapping test\n");
+void file_private_with_fork_test() {
+  printf(1, "file backed private mapping with fork test\n");
+  int size = 200;
+  char buf[200];
+  int fd = open(filename, O_RDWR);
+  if (fd == -1) {
+    printf(1, "file backed private mapping with fork test failed\n");
+    exit();
+  }
+  if (read(fd, buf, size) != size) {
+    printf(1, "file backed private mapping with fork test failed\n");
+    exit();
+  }
   char *ret = mmap((void *)0, 200, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
-  char *ret2 = mmap((void *)0, 200, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 300);
   int pid = fork();
   if (pid == 0) {
-    printf(1, "\n\n-------------Child process-----------\n\n");
-    printf(1, "Child Mapping 1:\n%s\n", ret);
     for (int i = 0; i < 50; i++) {
-      ret2[i] = 'a';
+      ret[i] = 'n';
     }
-    printf(1, "Child Mapping 2:\n%s\n", ret2);
-    sleep(3);
+    // The mapping should not be same as we have edited the data
+    if (my_strcmp(ret, buf, size) == 0) {
+      printf(1, "file backed private mapping with fork test failed\n");
+      exit();
+    }
+    exit();
   } else {
     wait();
-    printf(1, "\n\n------Parent process----------\n\n");
-    printf(1, "Parent Mapping 1:\n%s\n", ret);
-    printf(1, "Parent Mapping 2:\n%s\n", ret2);
+    // As it is private mapping therefore it should be same as read
+    if (my_strcmp(ret, buf, size) != 0) {
+      printf(1, "file backed private mapping with fork test failed\n");
+      exit();
+    }
+    int res = munmap(ret, size);
+    if (res == -1) {
+      printf(1, "file backed private mapping with fork test failed\n");
+      exit();
+    }
+    printf(1, "file backed private mapping with fork test ok\n");
   }
 }
 
 // ------------------------------------------------- shared file backed mapping with fork test -------------------------------------------------------
-void mmapSharedFileMappingForkTest(int fd) {
-  printf(1, "Fork with shared mapping test\n");
-  char *ret2 = mmap((void *)0, 200, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 300);
+void file_shared_with_fork_test() {
+  printf(1, "file backed shared mapping with fork test\n");
+  int size = 200;
+  char buf[200];
+  int fd = open(filename, O_RDWR);
+  if (fd == -1) {
+    printf(1, "file backed shared apping with fork test failed\n");
+    exit();
+  }
+  if (read(fd, buf, size) != size) {
+    printf(1, "file backed shared mapping with fork test failed\n");
+    exit();
+  }
+  char *ret2 = mmap((void *)0, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
   int pid = fork();
   if (pid == 0) {
-    printf(1, "-------------Child process-----------\n");
     for (int i = 0; i < 50; i++) {
-      ret2[i] = 'a';
+      ret2[i] = 'o';
     }
-    printf(1, "Child Mapping 2:\n%s\n", ret2);
+    if (my_strcmp(ret2, buf, size) == 0) {
+      printf(1, "file backed shared mapping with fork test failed\n");
+      exit();
+    }
+    exit();
   } else {
     wait();
-    printf(1, "\n\n------Parent process----------\n");
-    printf(1, "Parent Mapping 2:\n%s\n", ret2);
-    if (munmap(ret2, 200) < 0) {
-      printf(1, "mmap failed\n");
+    // The data written in child process should persist here
+    if (my_strcmp(ret2, buf, size) == 0) {
+      printf(1, "file backed shared mapping with fork test failed\n");
+      exit();
     }
+    int res = munmap(ret2, size);
+    if (res == -1) {
+      printf(1, "file backed shared mapping with fork test failed\n");
+      exit();
+    }
+    close(fd);
+    // Check if data is written into file
+    int fd2 = open(filename, O_RDWR);
+    for (int i = 0; i < 50; i++) {
+      buf[i] = 'o';
+    }
+    char buf2[200];
+    if (read(fd2, buf2, size) != size) {
+      printf(1, "file backed shared mapping with fork test failed\n");
+      exit();
+    }
+    if (my_strcmp(buf2, buf, size) != 0) {
+      printf(1, "file backed shared mapping with fork test failed\n");
+      exit();
+    }
+    printf(1, "file backed shared mapping with fork test ok\n");
+    close(fd2);
   }
 }
 
