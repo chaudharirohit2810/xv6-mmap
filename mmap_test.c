@@ -4,20 +4,20 @@
 #include "mmap.h"
 char *filename = "PASSWD";
 
-// File backend mappings test
-void file_private_test();                             // File backed private mapping
-void file_shared_test();                              // File backed shared mapping
-void file_invalid_fd_test();                          // Invalid fds provided to file backed mapping
-void file_invalid_flags_test();                       // Invalid flags provided to file backend mapping
-void file_writeable_shared_mapping_on_ro_file_test(); // writeable shared mapping on file opened in read only mode
-void file_ro_shared_mapping_on_ro_file_test();        // read only shared mapping on file opened in read only mode
-void file_exceed_size_test();                         // File backed mapping size exceeds KERNBASE
-void file_exceed_count_test();                        // File backend mapping count exceeds mmap array limit
-void file_private_mapping_perm_test();                // Mapping permissions test on private file backed mapping
-void file_pagecache_coherency_test();                 // Check if pagecache is updated after file write
-void file_private_with_fork_test();                   // Private file mapping with fork test
-void file_shared_with_fork_test();                    // Shared file mapping with fork test
-void file_mapping_with_offset_test();                 // Private file mapping with some offset test
+// File backend mappings test (18 tests)
+void file_private_test();                              // File backed private mapping
+void file_shared_test();                               // File backed shared mapping
+void file_invalid_fd_test();                           // Invalid fds provided to file backed mapping
+void file_invalid_flags_test();                        // Invalid flags provided to file backend mapping
+void file_writeable_shared_mapping_on_ro_file_test();  // writeable shared mapping on file opened in read only mode
+void file_ro_shared_mapping_on_ro_file_test();         // read only shared mapping on file opened in read only mode
+void file_exceed_size_test();                          // File backed mapping size exceeds KERNBASE
+void file_exceed_count_test();                         // File backend mapping count exceeds mmap array limit
+void file_private_mapping_perm_test();                 // Mapping permissions test on private file backed mapping
+void file_pagecache_coherency_test();                  // Check if pagecache is updated after file write
+void file_private_with_fork_test();                    // Private file mapping with fork test
+void file_shared_with_fork_test();                     // Shared file mapping with fork test
+void file_mapping_with_offset_test();                  // Private file mapping with some offset test
 void file_given_addr_test();                           // File backed Mapping with valid user provided address test
 void file_invalid_addr_test();                         // File backed Mapping with invalid user provided address test
 void file_overlap_given_addr_test();                   // File backed Mapping with user provided address overlapping with existing mapping test
@@ -40,8 +40,9 @@ void anon_intermediate_given_addr_test();              // Anonymous Mapping with
 void anon_intermediate_given_addr_not_possible_test(); // Anonymous Mapping with user provided address that cannot be fit between two existing mappings test
 void anon_write_on_ro_mapping_test();                  // Trying to write read only mapping test
 
-// Mmap tests
-void anon_private_test_when_munmap_size_is_not_total();
+// Other Mmap tests
+void munmap_partial_size_test();      // When user unmaps the mapping partially
+void mmap_write_on_ro_mapping_test(); // Write test on read only mapping
 
 void file_tests() {
   file_invalid_fd_test();
@@ -56,12 +57,12 @@ void file_tests() {
   file_pagecache_coherency_test();
   file_private_with_fork_test();
   file_shared_with_fork_test();
-	file_mapping_with_offset_test();
-	file_given_addr_test();
-	file_invalid_addr_test();
-	file_overlap_given_addr_test();
-	file_intermediate_given_addr_test();
-	file_intermediate_given_addr_not_possible_test();
+  file_mapping_with_offset_test();
+  file_given_addr_test();
+  file_invalid_addr_test();
+  file_overlap_given_addr_test();
+  file_intermediate_given_addr_test();
+  file_intermediate_given_addr_not_possible_test();
 }
 
 void anonymous_tests(void) {
@@ -70,7 +71,6 @@ void anonymous_tests(void) {
   anon_private_fork_test();
   anon_shared_multi_fork_test();
   anon_private_shared_fork_test();
-  // anon_write_on_ro_mapping_test();
   anon_missing_flags_test();
   anon_exceed_count_test();
   anon_exceed_size_test();
@@ -94,31 +94,9 @@ int my_strcmp(const char *a, const char *b, int n) {
 int main(int args, char *argv[]) {
   file_tests();
   anonymous_tests();
+  munmap_partial_size_test();
+  mmap_write_on_ro_mapping_test();
   exit();
-}
-
-// Simple private anonymous mapping test with maping having both read and write permission and size greater than two pages
-void anon_private_test_when_munmap_size_is_not_total() {
-  printf(1, "anonymous private mapping test\n");
-  int size = 10000;
-  int *ret = (int *)mmap((void *)0, size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-  if (ret == (void *)-1) {
-    printf(1, "anonymous private mapping test failed\n");
-    exit();
-  }
-  for (int i = 0; i < size / 4; i++) {
-    ret[i] = i;
-  }
-  int res = munmap((void *)ret, 5);
-  res = munmap((void *)ret, 5);
-  for (int i = 2048; i < size / 4; i++) {
-    printf(1, "%d\n", ret[i]);
-  }
-  if (res == -1) {
-    printf(1, "anonymous private mapping test failed\n");
-    exit();
-  }
-  printf(1, "anonymous private mapping test ok\n");
 }
 
 // <!!-------------------------------------------------- File Backed mapping -------------------------------------------------- !!>
@@ -357,11 +335,11 @@ void file_mapping_with_offset_test() {
     printf(1, "file backed mapping with offset test failed: at read\n");
     exit();
   }
-	if(read(fd, buf, size) != size) {
+  if (read(fd, buf, size) != size) {
     printf(1, "file backed mapping with offset test failed: at read\n");
     exit();
-	}
-	// Offset is 200
+  }
+  // Offset is 200
   char *ret = (char *)mmap((void *)0, size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 200);
   if (ret == (void *)-1) {
     printf(1, "file backed mapping with offset test failed\n");
@@ -516,7 +494,7 @@ void file_pagecache_coherency_test() {
   close(fd2);
 }
 
-// private file backed mapping with fork test 
+// private file backed mapping with fork test
 void file_private_with_fork_test() {
   printf(1, "file backed private mapping with fork test\n");
   int size = 200;
@@ -633,7 +611,7 @@ void file_given_addr_test() {
     printf(1, "file backed valid provided address test failed: at munmap\n");
     exit();
   }
-	close(fd);
+  close(fd);
   printf(1, "file backed valid provided address test ok\n");
 }
 
@@ -642,17 +620,17 @@ void file_invalid_addr_test(void) {
   printf(1, "file backed invalid provided address test\n");
   int fd = open(filename, O_RDWR);
   if (fd == -1) {
-  printf(1, "file backed invalid provided address test failed\n");
+    printf(1, "file backed invalid provided address test failed\n");
     exit();
   }
-  char *ret = (char *)mmap((void *)0x50001000, 200, PROT_READ | PROT_WRITE, MAP_PRIVATE , fd, 0);
+  char *ret = (char *)mmap((void *)0x50001000, 200, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
   if (ret != (void *)-1) {
     printf(1, "file backed invalid provided address test failed\n");
     munmap(ret, 200);
     exit();
   }
   printf(1, "file backed invalid provided address test ok\n");
-	close(fd);
+  close(fd);
 }
 
 // test when the address is provided by user and it overlaps with existing address
@@ -660,10 +638,10 @@ void file_overlap_given_addr_test() {
   printf(1, "file backed overlapping provided address test\n");
   int fd = open(filename, O_RDWR);
   if (fd == -1) {
-  	printf(1, "file backed overlapping provided address test failed\n");
+    printf(1, "file backed overlapping provided address test failed\n");
     exit();
   }
-  char *ret = (char *)mmap((void *)0x60001000, 10000, PROT_READ | PROT_WRITE, MAP_PRIVATE , fd, 0);
+  char *ret = (char *)mmap((void *)0x60001000, 10000, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
   if (ret == (void *)-1) {
     printf(1, "file backed overlapping provided address test failed: at first mmap\n");
     exit();
@@ -684,7 +662,7 @@ void file_overlap_given_addr_test() {
     exit();
   }
   printf(1, "file backed overlapping provided address test ok\n");
-	close(fd);
+  close(fd);
 }
 
 // test when the file backed mapping is possible between two mappings
@@ -692,15 +670,15 @@ void file_intermediate_given_addr_test() {
   printf(1, "file backed intermediate provided address test\n");
   int fd = open(filename, O_RDWR);
   if (fd == -1) {
-  	printf(1, "file backed intermediate provided address test failed\n");
+    printf(1, "file backed intermediate provided address test failed\n");
     exit();
   }
-  char *ret = (char *)mmap((void *)0, 1000, PROT_READ | PROT_WRITE, MAP_PRIVATE , fd, 0);
+  char *ret = (char *)mmap((void *)0, 1000, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
   if (ret == (void *)-1) {
     printf(1, "file backed intermediate provided address test failed: failed at first mmap\n");
     exit();
   }
-  char *ret2 = (char *)mmap((void *)0x60003000, 200, PROT_READ | PROT_WRITE, MAP_PRIVATE , fd, 0);
+  char *ret2 = (char *)mmap((void *)0x60003000, 200, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
   if (ret2 == (void *)-1) {
     printf(1, "file backed intermediate provided address test failed: failed at second mmap\n");
     munmap(ret, 1000);
@@ -731,7 +709,7 @@ void file_intermediate_given_addr_test() {
     printf(1, "file backed overlapping provided address test failed: at third munmap\n");
     exit();
   }
-	close(fd);
+  close(fd);
   printf(1, "file backed intermediate provided address test ok\n");
 }
 
@@ -740,15 +718,15 @@ void file_intermediate_given_addr_not_possible_test() {
   printf(1, "file backed intermediate provided address not possible test\n");
   int fd = open(filename, O_RDWR);
   if (fd == -1) {
-  	printf(1, "file backed intermediate provided address not possible test\n");
+    printf(1, "file backed intermediate provided address not possible test\n");
     exit();
   }
-  char *ret = (char *)mmap((void *)0, 1000, PROT_READ | PROT_WRITE, MAP_PRIVATE , fd, 0);
+  char *ret = (char *)mmap((void *)0, 1000, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
   if (ret == (void *)-1) {
     printf(1, "file backed intermediate provided address not possible test failed: failed at first mmap\n");
     exit();
   }
-  char *ret2 = (char *)mmap((void *)0x60003000, 200, PROT_READ | PROT_WRITE, MAP_PRIVATE , fd, 0);
+  char *ret2 = (char *)mmap((void *)0x60003000, 200, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
   if (ret2 == (void *)-1) {
     printf(1, "file backed intermediate provided address not possible test failed: failed at second mmap\n");
     exit();
@@ -761,7 +739,7 @@ void file_intermediate_given_addr_not_possible_test() {
   munmap(ret, 1000);
   munmap(ret2, 200);
   munmap(ret3, 10000);
-	close(fd);
+  close(fd);
   printf(1, "file backed intermediate provided address not possible test ok\n");
 }
 
@@ -977,34 +955,6 @@ void anon_private_fork_test() {
   }
 }
 
-// When there is only read permission on mapping but user tries to write
-void anon_write_on_ro_mapping_test() {
-  printf(1, "anonymous write on read only mapping test\n");
-  int pid = fork();
-  if (pid == -1) {
-    printf(1, "anonymous write on read only mapping failed in fork\n");
-  }
-  if (pid == 0) {
-    int size = 10000;
-    int *ret = (int *)mmap((void *)0, size, PROT_READ, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-    if (ret == (void *)-1) {
-      printf(1, "anonymous write on read only mapping test failed\n");
-      exit();
-    }
-    for (int i = 0; i < size / 4; i++) {
-      ret[i] = i;
-    }
-    int res = munmap((void *)ret, size);
-    if (res == -1) {
-      printf(1, "anonymous write on read only mapping test failed\n");
-      exit();
-    }
-    printf(1, "anonymous simple private mapping test ok\n");
-  } else {
-    wait();
-  }
-}
-
 // fork syscall with anonymous mapping test
 void anon_private_shared_fork_test() {
   printf(1, "anonymous private & shared mapping together with fork test\n");
@@ -1177,4 +1127,63 @@ void anon_intermediate_given_addr_not_possible_test() {
   munmap(ret2, 200);
   munmap(ret3, 10000);
   printf(1, "anonymous intermediate provided address not possible test ok\n");
+}
+
+// <!! -------------------------------------------------------------- Other MMAP Tests ---------------------------------------- !!>
+
+// When there is only read permission on mapping but user tries to write
+void mmap_write_on_ro_mapping_test() {
+  printf(1, "write on read only mapping test\n");
+  int pid = fork();
+  if (pid == -1) {
+    printf(1, "write on read only mapping failed in fork\n");
+    exit();
+  }
+  if (pid == 0) {
+    int size = 10000;
+    int *ret = (int *)mmap((void *)0, size, PROT_READ, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+    if (ret == (void *)-1) {
+      printf(1, "write on read only mapping test failed\n");
+      exit();
+    }
+    for (int i = 0; i < size / 4; i++) {
+      ret[i] = i;
+    }
+    // If the memory access allowed then test should failed
+    printf(1, "write on read only mapping test failed\n");
+    exit();
+  } else {
+    wait();
+    printf(1, "write on read only mapping test ok\n");
+  }
+}
+
+// Munmap only partial size of the mapping test
+void munmap_partial_size_test() {
+  printf(1, "munmap only partial size test\n");
+  int size = 10000;
+  int *ret = (int *)mmap((void *)0, size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+  if (ret == (void *)-1) {
+    printf(1, "munmap only partial size test failed\n");
+    exit();
+  }
+  for (int i = 0; i < size / 4; i++) {
+    ret[i] = i;
+  }
+  // Munmap only first page
+  int res = munmap((void *)ret, 5);
+  if (res == -1) {
+    printf(1, "munmap only partial size test failed\n");
+    exit();
+  }
+  // Check if next page is still accessible or not
+  for (int i = 1024; i < size / 4; i++) {
+    ret[i] = i * 2;
+  }
+  res = munmap((void *)ret, size);
+  if (res == -1) {
+    printf(1, "munmap only partial size test failed\n");
+    exit();
+  }
+  printf(1, "munmap only partial size test ok\n");
 }
