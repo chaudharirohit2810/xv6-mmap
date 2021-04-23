@@ -303,7 +303,11 @@ void *my_mmap(int addr, struct file *f, int size, int offset, int flags, int pro
   }
   // Store mmap info in process's mmap array
   p->mmaps[i].flags = flags;
-  p->mmaps[i].protection = PTE_U | protection;
+  if (protection == PROT_NONE) {
+    p->mmaps[i].protection = 0;
+  } else {
+    p->mmaps[i].protection = PTE_U | protection;
+  }
   p->mmaps[i].offset = offset;
   p->mmaps[i].f = f;
   p->total_mmaps += 1;
