@@ -43,6 +43,9 @@ void anon_write_on_ro_mapping_test();                  // Trying to write read o
 // Other Mmap tests
 void munmap_partial_size_test();      // When user unmaps the mapping partially
 void mmap_write_on_ro_mapping_test(); // Write test on read only mapping
+void mmap_none_permission_test();     // None permission on mapping test
+void mmap_valid_map_fixed_test();     // MAP_FIXED flag testing with valid address
+void mmap_invalid_map_fixed_test();   // MAP_FIXED flag testing with invalid addresses
 
 void file_tests() {
   file_invalid_fd_test();
@@ -96,6 +99,9 @@ int main(int args, char *argv[]) {
   anonymous_tests();
   munmap_partial_size_test();
   mmap_write_on_ro_mapping_test();
+  mmap_none_permission_test();
+  mmap_valid_map_fixed_test();
+  mmap_invalid_map_fixed_test();
   exit();
 }
 
@@ -1186,4 +1192,78 @@ void munmap_partial_size_test() {
     exit();
   }
   printf(1, "munmap only partial size test ok\n");
+}
+
+// None permission on mapping test
+void mmap_none_permission_test() {
+  printf(1, "none permission on mapping test\n");
+  int pid = fork();
+  if (pid == -1) {
+    printf(1, "none permission on mapping test failed\n");
+    exit();
+  }
+  if (pid == 0) {
+    int size = 10000;
+    char *ret = (char *)mmap((void *)0x70003000, size, PROT_NONE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+    if (ret == (void *)-1) {
+      printf(1, "none permission on mapping test failed\n");
+      exit();
+    }
+    printf(1, "%s\n", ret);
+    for (int i = 0; i < size / 4; i++) {
+      ret[i] = i;
+    }
+    // If the memory access allowed then test should failed
+    printf(1, "none permission on mapping test failed\n");
+    exit();
+  } else {
+    wait();
+    printf(1, "none permission on mapping test ok\n");
+  }
+}
+
+// To test MAP_FIXED flag with valid address
+void mmap_valid_map_fixed_test() {
+  printf(1, "mmap valid address map fixed flag test\n");
+  char *ret = mmap((void *)0x60001000, 200, PROT_WRITE | PROT_READ, MAP_FIXED | MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  if (ret == (void *)-1) {
+    printf(1, "mmap valid address map fixed flag test failed\n");
+    exit();
+  }
+  int res = munmap(ret, 200);
+  if (res == -1) {
+    printf(1, "mmap valid address map fixed flag test failed\n");
+    exit();
+  }
+  printf(1, "mmap valid address map fixed flag test ok\n");
+}
+
+// To test MAP_FIXED flag with invalid addresses
+void mmap_invalid_map_fixed_test() {
+  printf(1, "mmap invalid address map fixed flag test\n");
+  // When the address is less than MMAPBASE
+  char *ret = mmap((void *)0x50001000, 200, PROT_WRITE | PROT_READ, MAP_FIXED | MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  if (ret != (void *)-1) {
+    printf(1, "mmap invalid address map fixed flag test failed\n");
+    exit();
+  }
+  // When the address is not page aligned
+  char *ret2 = mmap((void *)0x60000100, 200, PROT_WRITE | PROT_READ, MAP_FIXED | MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  if (ret2 != (void *)-1) {
+    printf(1, "mmap invalid address map fixed flag test failed\n");
+    exit();
+  }
+  // Mapping is not possible because other mapping already exists at provided address
+  char *ret3 = mmap((void *)0x60000000, 200, PROT_WRITE | PROT_READ, MAP_FIXED | MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  if (ret3 == (void *)-1) {
+    printf(1, "mmap invalid address map fixed flag test failed\n");
+    exit();
+  }
+  char *ret4 = mmap((void *)0x60000000, 200, PROT_WRITE | PROT_READ, MAP_FIXED | MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  if (ret4 != (void *)-1) {
+    printf(1, "mmap invalid address map fixed flag test failed\n");
+    exit();
+  }
+  munmap(ret3, 200);
+  printf(1, "mmap invalid address map fixed flag test ok\n");
 }
