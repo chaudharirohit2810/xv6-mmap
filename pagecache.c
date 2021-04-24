@@ -5,28 +5,31 @@
 
 // Page cache structure
 // TODO: Later think of something like hash map and linked list
-struct pagecache pages[NPAGECACHE];
-int totalCount = 0;
+struct {
+	struct cached_page pages[NPAGECACHE];
+	int totalCount;
+} pagecache;
 
 // To intialize the page cache
 void pagecacheinit(void) {
   for (int i = 0; i < NPAGECACHE; i++) {
-    pages[i].page = kalloc();
-    if (!pages[i].page) {
+    pagecache.pages[i].page = kalloc();
+    if (!pagecache.pages[i].page) {
       cprintf("pagecacheinit: Kalloc failed");
       return;
     }
-    memset(pages[i].page, 0, PGSIZE);
+    memset(pagecache.pages[i].page, 0, PGSIZE);
   }
+	pagecache.totalCount = 0;
   cprintf("Initialized the page cache\n");
 }
 
 // To find page in page cache
-static struct pagecache *findPage(uint inum, int offset, int dev) {
+static struct cached_page *findPage(uint inum, int offset, int dev) {
   for (int i = 0; i < NPAGECACHE; i++) {
-    if (pages[i].inode_number == inum && pages[i].offset == offset && pages[i].dev == dev) {
-      //      cprintf("found returning: %p\n", pages[i].page);
-      return &pages[i];
+    if (pagecache.pages[i].inode_number == inum && pagecache.pages[i].offset == offset && pagecache.pages[i].dev == dev) {
+      //      cprintf("found returning: %p\n", pagecache.pages[i].page);
+      return &pagecache.pages[i];
     }
   }
   return 0;
@@ -35,7 +38,7 @@ static struct pagecache *findPage(uint inum, int offset, int dev) {
 void updatePage(int offset, int inum, int dev, char* addr, int size) {
 	int alligned_offset = offset - offset % PGSIZE;
 	int start_addr = offset % PGSIZE;
-  struct pagecache* res = findPage(inum, alligned_offset, dev);
+  struct cached_page* res = findPage(inum, alligned_offset, dev);
 	if(!res) {
 		 return;
 	}
@@ -48,15 +51,15 @@ void updatePage(int offset, int inum, int dev, char* addr, int size) {
 char *getPage(struct inode *ip, int offset, int inum, int dev) {
   offset -= offset % PGSIZE;
   // Find the page in page cache
-  struct pagecache *res = findPage(inum, offset, dev);
+  struct cached_page *res = findPage(inum, offset, dev);
   if (res) {
     return res->page;
   }
   // If the page is not present then use one which has refcount as 0
   //  cprintf("not present, use one from page cache\n");
-  struct pagecache *allocpagecache = &pages[totalCount++];
-  if (totalCount == NPAGECACHE) {
-    totalCount = 0;
+  struct cached_page *allocpagecache = &pagecache.pages[pagecache.totalCount++];
+  if (pagecache.totalCount == NPAGECACHE) {
+    pagecache.totalCount = 0;
   }
   // Read from the disk into page cache
   memset(allocpagecache->page, 0, PGSIZE);

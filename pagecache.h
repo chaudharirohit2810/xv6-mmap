@@ -2,7 +2,7 @@
 #define NPAGECACHE 30
 
 // Main pagecache structure
-struct pagecache {
+struct cached_page {
   int dev;
   int inode_number;
   int refCount;
