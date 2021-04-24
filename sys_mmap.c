@@ -284,22 +284,34 @@ void *my_mmap(int addr, struct file *f, int size, int offset, int flags, int pro
   if ((flags & MAP_SHARED) && (protection & PROT_WRITE) && !f->writable) {
     return (void *)-1;
   }
-  int i;
-  int flag = 0;
-  if ((void *)addr != (void *)0) {
-    if (addr < MMAPBASE || (PGROUNDUP(addr) + size) > KERNBASE) {
+  int i = -1;
+  if (flags & MAP_FIXED) {
+    if ((void *)addr != (void *)0) {
+      if (addr < MMAPBASE || PGROUNDUP(PGROUNDUP(addr) + size) > KERNBASE || addr % PGSIZE != 0) {
+        return (void *)-1;
+      }
+      i = check_mmap_possible(p, (uint)addr, size);
+      if (i == -1) {
+        return (void *)-1;
+      }
+    }
+  } else {
+    int flag = 0;
+    if ((void *)addr != (void *)0) {
+      if (addr < MMAPBASE || PGROUNDUP(PGROUNDUP(addr) + size) > KERNBASE) {
+        return (void *)-1;
+      }
+      i = check_mmap_possible(p, (uint)addr, size);
+      if (i != -1) {
+        flag = 1;
+      }
+    }
+    if (!flag) {
+      i = find_mmap_addr(p, size);
+    }
+    if (i == -1) {
       return (void *)-1;
     }
-    i = check_mmap_possible(p, (uint)addr, size);
-    if (i != -1) {
-      flag = 1;
-    }
-  }
-  if (!flag) {
-    i = find_mmap_addr(p, size);
-  }
-  if (i == -1) {
-    return (void *)-1;
   }
   // Store mmap info in process's mmap array
   p->mmaps[i].flags = flags;
