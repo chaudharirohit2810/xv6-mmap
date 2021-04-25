@@ -135,7 +135,7 @@ int setup_mmap_arr(struct proc *p, int size, int i, uint mmapaddr) {
   // Store the virtual_address in mapping
   p->mmaps[i + 1].virt_addr = mmapaddr;
   p->mmaps[i + 1].size = size;
-  return i + 1; // Return the index of mmap mapping
+  return i + 1;  // Return the index of mmap mapping
 }
 
 // To check if mmap is possible at user provided address
@@ -168,7 +168,7 @@ int find_mmap_addr(struct proc *p, int size) {
     }
     p->mmaps[0].virt_addr = PGROUNDUP(MMAPBASE);
     p->mmaps[0].size = size;
-    return 0; // Return the index in mmap region array
+    return 0;  // Return the index in mmap region array
   }
   // TODO: Check if page can be mapped between MMAPBASE and first mapping
   // Find the map address
@@ -192,7 +192,7 @@ int find_mmap_addr(struct proc *p, int size) {
 // Function to map the pagecache page to process
 static int map_pagecache_page_util(struct proc *p, struct file *f, uint mmapaddr,
                                    int protection, int offset, int size) {
-  char *temp = kalloc(); // Allocate a temporary page
+  char *temp = kalloc();  // Allocate a temporary page
   if (!temp) {
     // Kalloc failed
     return -1;
@@ -204,13 +204,13 @@ static int map_pagecache_page_util(struct proc *p, struct file *f, uint mmapaddr
   while (tempsize != 0) {
     // Get the page from page cache
     char *page = getPage(f->ip, offset + PGSIZE * i, f->ip->inum, f->ip->dev);
-    if (page == (char *)-1) { // allocation of page from page cache failed
+    if (page == (char *)-1) {  // allocation of page from page cache failed
       return -1;
     }
     int curroff = offset % PGSIZE;
     int currsize = PGSIZE - curroff > tempsize ? tempsize : PGSIZE - curroff;
     memmove(temp + size - tempsize, page + curroff,
-            currsize); // Copy the content from page cache to allocated page
+            currsize);  // Copy the content from page cache to allocated page
     tempsize -= currsize;
     offset = 0;
     i += 1;
@@ -259,8 +259,7 @@ static int map_anon_page(struct proc *p, uint off, int protection) {
 static int map_anon_main(struct proc *p, uint mmapaddr, int protection, int size) {
   int i = 0;
   for (; i < size; i += PGSIZE) {
-    if (map_anon_page(p, mmapaddr + i, protection) < 0)
-      return -1;
+    if (map_anon_page(p, mmapaddr + i, protection) < 0) return -1;
   }
   return size;
 }
@@ -268,11 +267,11 @@ static int map_anon_main(struct proc *p, uint mmapaddr, int protection, int size
 // <!! ------------------ Main Functions ------------- !!>
 int mmap_store_data(struct proc *p, int addr, int size, int flags, int protection,
                     struct file *f, int offset) {
-  if (!(flags & MAP_ANONYMOUS)) { // File backed mapping
+  if (!(flags & MAP_ANONYMOUS)) {  // File backed mapping
     if (map_pagecache_page(p, f, addr, protection, offset, size) == -1) {
       return -1;
     }
-  } else { // Anonymous mapping
+  } else {  // Anonymous mapping
     if (map_anon_main(p, addr, protection, size) < 0) {
       return -1;
     }
@@ -299,9 +298,8 @@ void *my_mmap(int addr, struct file *f, int size, int offset, int flags, int pro
   int i = -1;
   if (flags & MAP_FIXED) {
     if ((void *)addr != (void *)0) {
-			uint rounded_addr = PGROUNDUP(PGROUNDUP(addr) + size);  
-      if (addr < MMAPBASE || rounded_addr > KERNBASE ||
-          addr % PGSIZE != 0) {
+      uint rounded_addr = PGROUNDUP(PGROUNDUP(addr) + size);
+      if (addr < MMAPBASE || rounded_addr > KERNBASE || addr % PGSIZE != 0) {
         return (void *)-1;
       }
       i = check_mmap_possible(p, (uint)addr, size);
@@ -312,7 +310,7 @@ void *my_mmap(int addr, struct file *f, int size, int offset, int flags, int pro
   } else {
     int flag = 0;
     if ((void *)addr != (void *)0) {
-			uint rounded_addr = PGROUNDUP(PGROUNDUP(addr) + size);  
+      uint rounded_addr = PGROUNDUP(PGROUNDUP(addr) + size);
       if (addr < MMAPBASE || rounded_addr > KERNBASE) {
         return (void *)-1;
       }
