@@ -8,4 +8,5 @@ struct cached_page {
   int refCount;
   int offset;
   char *page;
+	struct sleeplock lock;
 };

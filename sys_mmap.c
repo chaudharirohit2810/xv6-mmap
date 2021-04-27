@@ -207,14 +207,12 @@ static int map_pagecache_page_util(struct proc *p, struct file *f,
   int i = 0;
   while (tempsize != 0) {
     // Get the page from page cache
-    char *page = getPage(f->ip, offset + PGSIZE * i, f->ip->inum, f->ip->dev);
-    if (page == (char *)-1) { // allocation of page from page cache failed
-      return -1;
-    }
     int curroff = offset % PGSIZE;
     int currsize = PGSIZE - curroff > tempsize ? tempsize : PGSIZE - curroff;
-    memmove(temp + size - tempsize, page + curroff,
-            currsize); // Copy the content from page cache to allocated page
+    int a = copyPage(f->ip, offset + PGSIZE * i, f->ip->inum, f->ip->dev,
+                     temp + size - tempsize, currsize, curroff);
+    if (a == -1)
+      return -1;
     tempsize -= currsize;
     offset = 0;
     i += 1;
