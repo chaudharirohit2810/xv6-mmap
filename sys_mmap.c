@@ -174,7 +174,6 @@ int find_mmap_addr(struct proc *p, int size) {
     p->mmaps[0].size = size;
     return 0; // Return the index in mmap region array
   }
-  // TODO: Check if page can be mapped between MMAPBASE and first mapping
   // Find the map address
   int i = 0;
   while (i < p->total_mmaps && p->mmaps[i + 1].virt_addr != 0) {
@@ -386,7 +385,6 @@ int my_munmap(struct proc *p, int addr, int size) {
     if (pa == 0) {
       // Page was not mapped yet
       // Left shift the mmap array
-      // TODO : Later add some check to check if page was mapped
       break;
     }
     char *v = P2V(pa);

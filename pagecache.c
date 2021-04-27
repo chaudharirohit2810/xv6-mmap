@@ -6,8 +6,8 @@
 // Page cache structure
 // TODO: Later think of something like hash map and linked list
 struct {
-	struct cached_page pages[NPAGECACHE];
-	int totalCount;
+  struct cached_page pages[NPAGECACHE];
+  int totalCount;
 } pagecache;
 
 // To intialize the page cache
@@ -20,34 +20,35 @@ void pagecacheinit(void) {
     }
     memset(pagecache.pages[i].page, 0, PGSIZE);
   }
-	pagecache.totalCount = 0;
+  pagecache.totalCount = 0;
   cprintf("Initialized the page cache\n");
 }
 
 // To find page in page cache
 static struct cached_page *findPage(uint inum, int offset, int dev) {
   for (int i = 0; i < NPAGECACHE; i++) {
-    if (pagecache.pages[i].inode_number == inum && pagecache.pages[i].offset == offset && pagecache.pages[i].dev == dev) {
-      //      cprintf("found returning: %p\n", pagecache.pages[i].page);
+    if (pagecache.pages[i].inode_number == inum &&
+        pagecache.pages[i].offset == offset && pagecache.pages[i].dev == dev) {
       return &pagecache.pages[i];
     }
   }
   return 0;
 }
 
-void updatePage(int offset, int inum, int dev, char* addr, int size) {
-	int alligned_offset = offset - offset % PGSIZE;
-	int start_addr = offset % PGSIZE;
-  struct cached_page* res = findPage(inum, alligned_offset, dev);
-	if(!res) {
-		 return;
-	}
-	char* page = res->page;
-	memmove(page + start_addr, addr, size);
-	return;
+void updatePage(int offset, int inum, int dev, char *addr, int size) {
+  int alligned_offset = offset - offset % PGSIZE;
+  int start_addr = offset % PGSIZE;
+  struct cached_page *res = findPage(inum, alligned_offset, dev);
+  if (!res) {
+    return;
+  }
+  char *page = res->page;
+  memmove(page + start_addr, addr, size);
+  return;
 }
 
-// Check if page is present in page cache if yes return it or if absent allocate a new one
+// Check if page is present in page cache if yes return it or if absent allocate
+// a new one
 char *getPage(struct inode *ip, int offset, int inum, int dev) {
   offset -= offset % PGSIZE;
   // Find the page in page cache
