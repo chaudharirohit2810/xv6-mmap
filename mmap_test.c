@@ -5,73 +5,50 @@
 char *filename = "PASSWD";
 
 // File backend mappings test (18 tests)
-void file_private_test();       // File backed private mapping
-void file_shared_test();        // File backed shared mapping
-void file_invalid_fd_test();    // Invalid fds to file backed mapping
-void file_invalid_flags_test(); // Invalid flags to file backend mapping
-// writeable shared mapping on read only file
+void file_private_test();
+void file_shared_test();
+void file_invalid_fd_test();
+void file_invalid_flags_test();
 void file_writeable_shared_mapping_on_ro_file_test();
-// read only shared mapping on file opened in read only mode
 void file_ro_shared_mapping_on_ro_file_test();
-void file_exceed_size_test();  // File backed mapping size exceeds KERNBASE
-void file_exceed_count_test(); // File backend mapping count exceeds mmap array
-                               // limit
-// Mapping permissions test on private file backed mapping
+void file_exceed_size_test();
+void file_exceed_count_test();
 void file_private_mapping_perm_test();
-void file_pagecache_coherency_test(); // Check if pagecache is updated after
-                                      // file write
-void file_private_with_fork_test();   // Private file mapping with fork test
-void file_shared_with_fork_test();    // Shared file mapping with fork test
-void file_mapping_with_offset_test(); // Private file mapping with some offset
-                                      // test
-void file_given_addr_test();   // File backed Mapping with valid user provided
-                               // address test
-void file_invalid_addr_test(); // File backed Mapping with invalid user provided
-                               // address
-// File backed Mapping with user provided address overlapping with existing
-// mapping test
+void file_pagecache_coherency_test();
+void file_private_with_fork_test();
+void file_shared_with_fork_test();
+void file_mapping_with_offset_test();
+void file_given_addr_test();
+void file_invalid_addr_test();
 void file_overlap_given_addr_test();
-// File backed Mapping with user provided address can be fit between two
-// existing mappings
 void file_intermediate_given_addr_test();
-// File Mapping with user provided address that cannot fit between two existing
-// mappings
 void file_intermediate_given_addr_not_possible_test();
 void file_exceeds_file_size_test();
+void file_mapping_on_wo_file_test();
 
 // Anonymous tests (14 tests)
-void anon_private_test();           // private anonymous mapping test
-void anon_shared_test();            // Shared anonymous mapping test
-void anon_private_fork_test();      // Private anonymous mapping with fork test
-void anon_shared_multi_fork_test(); // Shared mapping with multiple forks test
-void anon_exceed_size_test();       // Mapping exceeds KERNBASE due to size test
-void anon_exceed_count_test(); // Mapping count exceeds 30 (mmap array limit)
+void anon_private_test();
+void anon_shared_test();
+void anon_private_fork_test();
+void anon_shared_multi_fork_test();
+void anon_exceed_size_test();
+void anon_exceed_count_test();
+void anon_zero_size_test();
 void anon_missing_flags_test();
-// Private & Shared anonymous mapping together with fork test Invalid flags to
-// mmap test
 void anon_private_shared_fork_test();
-void anon_given_addr_test();   // Anonymous Mapping with valid user provided
-                               // address test
-void anon_invalid_addr_test(); // Anonymous Mapping with invalid user provided
-                               // address
-// Anonymous Mapping with user provided address overlapping with existing
-// mapping test
+void anon_given_addr_test();
+void anon_invalid_addr_test();
 void anon_overlap_given_addr_test();
-// Anonymous Mapping with user provided address can be fit between two existing
-// mappings
 void anon_intermediate_given_addr_test();
-// Anonymous Mapping with provided address that cannot fit between two existing
-// mappings
 void anon_intermediate_given_addr_not_possible_test();
-void anon_write_on_ro_mapping_test(); // Trying to write read only mapping test
+void anon_write_on_ro_mapping_test();
 
 // Other Mmap tests
-void munmap_partial_size_test();      // When user unmaps the mapping partially
-void mmap_write_on_ro_mapping_test(); // Write test on read only mapping
-void mmap_none_permission_test();     // None permission on mapping test
-void mmap_valid_map_fixed_test();   // MAP_FIXED flag testing with valid address
-void mmap_invalid_map_fixed_test(); // MAP_FIXED flag testing with invalid
-                                    // addresses
+void munmap_partial_size_test();
+void mmap_write_on_ro_mapping_test();
+void mmap_none_permission_test();
+void mmap_valid_map_fixed_test();
+void mmap_invalid_map_fixed_test();
 
 void file_tests() {
   file_invalid_fd_test();
@@ -93,9 +70,10 @@ void file_tests() {
   file_intermediate_given_addr_test();
   file_intermediate_given_addr_not_possible_test();
   file_exceeds_file_size_test();
+	file_mapping_on_wo_file_test();
 }
 
-void anonymous_tests(void) {
+void anonymous_tests() {
   anon_private_test();
   anon_shared_test();
   anon_private_fork_test();
@@ -104,11 +82,28 @@ void anonymous_tests(void) {
   anon_missing_flags_test();
   anon_exceed_count_test();
   anon_exceed_size_test();
+	anon_zero_size_test();
   anon_given_addr_test();
   anon_invalid_addr_test();
   anon_overlap_given_addr_test();
   anon_intermediate_given_addr_test();
   anon_intermediate_given_addr_not_possible_test();
+}
+
+void other_tests() {
+  munmap_partial_size_test();
+  mmap_write_on_ro_mapping_test();
+  mmap_none_permission_test();
+  mmap_valid_map_fixed_test();
+  mmap_invalid_map_fixed_test();
+}
+
+
+int main(int args, char *argv[]) {
+  file_tests();
+  anonymous_tests();
+	other_tests();
+  exit();
 }
 
 // Utility strcmp function
@@ -121,18 +116,121 @@ int my_strcmp(const char *a, const char *b, int n) {
   return 0;
 }
 
-int main(int args, char *argv[]) {
-  file_tests();
-  anonymous_tests();
-  munmap_partial_size_test();
-  mmap_write_on_ro_mapping_test();
-  mmap_none_permission_test();
-  mmap_valid_map_fixed_test();
-  mmap_invalid_map_fixed_test();
-  exit();
+// <!!-------- File Backed mapping ---------- !!>
+
+// Simple private file backed mapping test
+void file_private_test() {
+  printf(1, "file backed private mapping test\n");
+  int fd = open(filename, O_RDWR);
+  if (fd == -1) {
+    printf(1, "file backed private mapping test failed: at open\n");
+    exit();
+  }
+  int size = 1000;
+  char buf[1000];
+  int n = read(fd, buf, size);
+  if (n != size) {
+    printf(1, "file backed private mapping test failed: at read\n");
+    exit();
+  }
+  char *ret =
+      (char *)mmap((void *)0, size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
+  if (ret == (void *)-1) {
+    printf(1, "file backed private mapping test failed\n");
+    exit();
+  }
+  if (my_strcmp(buf, ret, size) != 0) {
+    printf(1, "file backed private mapping test failed\n");
+    exit();
+  }
+  for (int i = 0; i < 40; i++) {
+    ret[i] = 'p';
+    buf[i] = 'p';
+  }
+  if (my_strcmp(buf, ret, size) != 0) {
+    printf(1, "file backed private mapping test failed\n");
+    exit();
+  }
+  int res = munmap((void *)ret, size);
+  if (res == -1) {
+    printf(1, "file backed private mapping test failed\n");
+    exit();
+  }
+  int fd2 = open(filename, O_RDONLY);
+  char buf2[1000];
+  // Read from the file again and check if it is not equal to mapping data as
+  // mapping is private
+  n = read(fd2, buf2, size);
+  if (n != size) {
+    printf(1, "file backed private mapping test failed: at read\n");
+    exit();
+  }
+  if (my_strcmp(buf, buf2, size) == 0) {
+    printf(1, "file backed private mapping test failed\n");
+    exit();
+  }
+  close(fd2);
+  close(fd);
+  printf(1, "file backed private mapping test ok\n");
 }
 
-// <!!-------- File Backed mapping ---------- !!>
+// Shared file backed mapping test
+void file_shared_test() {
+  printf(1, "file backed shared mapping test\n");
+  int fd = open(filename, O_RDWR);
+  if (fd == -1) {
+    printf(1, "file backed shared mapping test failed: at open\n");
+    exit();
+  }
+  int size = 1000;
+  char buf[1000];
+  int n = read(fd, buf, size);
+  if (n != size) {
+    printf(1, "file backed shared mapping test failed: at read\n");
+    exit();
+  }
+  char *ret =
+      (char *)mmap((void *)0, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+  if (ret == (void *)-1) {
+    printf(1, "file backed shared mapping test failed\n");
+    exit();
+  }
+  // Check if both entries have same data
+  if (my_strcmp(buf, ret, size) != 0) {
+    printf(1, "file backed shared mapping test failed\n");
+    exit();
+  }
+  for (int i = 0; i < 40; i++) {
+    ret[i] = 'a';
+    buf[i] = 'a';
+  }
+  // Check if both mappings are same after edit
+  if (my_strcmp(buf, ret, size) != 0) {
+    printf(1, "file backed shared mapping test failed\n");
+    exit();
+  }
+  int res = munmap((void *)ret, size);
+  if (res == -1) {
+    printf(1, "file backed shared mapping test failed\n");
+    exit();
+  }
+  int fd2 = open(filename, O_RDONLY);
+  char buf2[1000];
+  // Read from the file again and check if it is equal to mapping data
+  n = read(fd2, buf2, size);
+  if (n != size) {
+    printf(1, "file backed shared mapping test failed: at read\n");
+    exit();
+  }
+  if (my_strcmp(buf, buf2, size) != 0) {
+    printf(1, "file backed shared mapping test failed\n");
+    exit();
+  }
+  close(fd2);
+  close(fd);
+  printf(1, "file backed shared mapping test ok\n");
+}
+
 // When invalid fd is provided to mapping
 void file_invalid_fd_test() {
   printf(1, "file backed mapping invalid file descriptor test\n");
@@ -320,62 +418,6 @@ void file_exceed_count_test() {
 }
 
 // Simple private file backed mapping test
-void file_private_test() {
-  printf(1, "file backed private mapping test\n");
-  int fd = open(filename, O_RDWR);
-  if (fd == -1) {
-    printf(1, "file backed private mapping test failed: at open\n");
-    exit();
-  }
-  int size = 1000;
-  char buf[1000];
-  int n = read(fd, buf, size);
-  if (n != size) {
-    printf(1, "file backed private mapping test failed: at read\n");
-    exit();
-  }
-  char *ret =
-      (char *)mmap((void *)0, size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
-  if (ret == (void *)-1) {
-    printf(1, "file backed private mapping test failed\n");
-    exit();
-  }
-  if (my_strcmp(buf, ret, size) != 0) {
-    printf(1, "file backed private mapping test failed\n");
-    exit();
-  }
-  for (int i = 0; i < 40; i++) {
-    ret[i] = 'p';
-    buf[i] = 'p';
-  }
-  if (my_strcmp(buf, ret, size) != 0) {
-    printf(1, "file backed private mapping test failed\n");
-    exit();
-  }
-  int res = munmap((void *)ret, size);
-  if (res == -1) {
-    printf(1, "file backed private mapping test failed\n");
-    exit();
-  }
-  int fd2 = open(filename, O_RDONLY);
-  char buf2[1000];
-  // Read from the file again and check if it is not equal to mapping data as
-  // mapping is private
-  n = read(fd2, buf2, size);
-  if (n != size) {
-    printf(1, "file backed private mapping test failed: at read\n");
-    exit();
-  }
-  if (my_strcmp(buf, buf2, size) == 0) {
-    printf(1, "file backed private mapping test failed\n");
-    exit();
-  }
-  close(fd2);
-  close(fd);
-  printf(1, "file backed private mapping test ok\n");
-}
-
-// Simple private file backed mapping test
 void file_mapping_with_offset_test() {
   printf(1, "file backed mapping with offset test\n");
   int fd = open(filename, O_RDWR);
@@ -457,61 +499,23 @@ void file_exceeds_file_size_test() {
   printf(1, "File exceed file size test ok\n");
 }
 
-// Shared file backed mapping test
-void file_shared_test() {
-  printf(1, "file backed shared mapping test\n");
-  int fd = open(filename, O_RDWR);
+// Trying to map using writeonly file 
+void file_mapping_on_wo_file_test() {
+  printf(1, "file mapping on write only file\n");
+  int fd = open(filename, O_WRONLY);
   if (fd == -1) {
-    printf(1, "file backed shared mapping test failed: at open\n");
+  	printf(1, "file mapping on write only file failed\n");
     exit();
   }
-  int size = 1000;
-  char buf[1000];
-  int n = read(fd, buf, size);
-  if (n != size) {
-    printf(1, "file backed shared mapping test failed: at read\n");
-    exit();
-  }
+  int size = 2000;
   char *ret =
       (char *)mmap((void *)0, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
   if (ret == (void *)-1) {
-    printf(1, "file backed shared mapping test failed\n");
-    exit();
+  	printf(1, "file mapping on write only file ok\n");
+		return;
   }
-  // Check if both entries have same data
-  if (my_strcmp(buf, ret, size) != 0) {
-    printf(1, "file backed shared mapping test failed\n");
-    exit();
-  }
-  for (int i = 0; i < 40; i++) {
-    ret[i] = 'a';
-    buf[i] = 'a';
-  }
-  // Check if both mappings are same after edit
-  if (my_strcmp(buf, ret, size) != 0) {
-    printf(1, "file backed shared mapping test failed\n");
-    exit();
-  }
-  int res = munmap((void *)ret, size);
-  if (res == -1) {
-    printf(1, "file backed shared mapping test failed\n");
-    exit();
-  }
-  int fd2 = open(filename, O_RDONLY);
-  char buf2[1000];
-  // Read from the file again and check if it is equal to mapping data
-  n = read(fd2, buf2, size);
-  if (n != size) {
-    printf(1, "file backed shared mapping test failed: at read\n");
-    exit();
-  }
-  if (my_strcmp(buf, buf2, size) != 0) {
-    printf(1, "file backed shared mapping test failed\n");
-    exit();
-  }
-  close(fd2);
-  close(fd);
-  printf(1, "file backed shared mapping test ok\n");
+  printf(1, "file mapping on write only file failed\n");
+	exit();
 }
 
 // Check if pagecache is updated after write to file
@@ -894,6 +898,18 @@ void anon_exceed_size_test(void) {
     exit();
   }
   printf(1, "anonymous exceed mapping size test ok\n");
+}
+
+// mmap when provided size is 0
+void anon_zero_size_test(void) {
+  printf(1, "anonymous zero size mapping test\n");
+  char *ret = (char *)mmap((void *)0, 0, PROT_READ | PROT_WRITE,
+                           MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  if (ret != (void *)-1) {
+  	printf(1, "anonymous zero size mapping test failed\n");
+    exit();
+  }
+  printf(1, "anonymous zero size mapping test ok\n");
 }
 
 // anonymous mapping count test when it exceeds 30
@@ -1309,6 +1325,7 @@ void anon_intermediate_given_addr_not_possible_test() {
 }
 
 // <!! ------------------Other MMAP Tests ------------- !!>
+
 // When there is only read permission on mapping but user tries to write
 void mmap_write_on_ro_mapping_test() {
   printf(1, "write on read only mapping test\n");
