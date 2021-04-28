@@ -1,9 +1,10 @@
 # mmap in xv6
+This project implements ```mmap()``` and ```munmap()``` system calls in xv6. 
 mmap and munmap system calls provide extensive control over the process address space. According to linux manual, 
-mmap() creates a new mapping in the virtual address space of the calling process. 
+creates a new mapping in the virtual address space of the calling process. 
 It can be used to use to **map file into memory, share physical memory between the processes or to allocate large chunks of memory (like malloc)**.
 
-## Features:
+## Implementations:
 - Pagecache implementation: 
 	- Implemented pagecache on top of buffer cache.
 	- Used to retrieve & store contents of file in physical memory to reduce the overall read time 
