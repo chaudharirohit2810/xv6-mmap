@@ -15,6 +15,7 @@
 #include "sleeplock.h"
 #include "file.h"
 #include "fcntl.h"
+#include "x86.h"
 #include "mmap.h"
 
 // Fetch the nth word-sized system call argument as a file descriptor
@@ -462,6 +463,8 @@ int sys_mmap(void) {
   // File descriptor arguement
   if (argfd(4, &fd, &f) < 0) {
     if (!(flags & MAP_ANON)) {
+			struct proc* p = myproc();
+			p->tf->err = 1;
       return -1;
     }
   }

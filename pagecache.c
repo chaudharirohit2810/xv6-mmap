@@ -85,7 +85,6 @@ struct cached_page *getPage(struct inode *ip, int offset, int inum, int dev) {
   memset(allocpagecache->page, 0, PGSIZE);
   int n = readi(ip, allocpagecache->page, offset, PGSIZE);
   if (n == -1) {
-    cprintf("getPage Error: Read from disk failed\n");
     return (struct cached_page *)-1;
   }
   // Set the inode number & offset and increment the reference count
@@ -101,7 +100,7 @@ int copyPage(struct inode *ip, int offset, int inum, int dev, char *dest,
   struct cached_page *page = getPage(ip, offset, inum, dev);
   // allocation of page from page cache failed
   if (page == (struct cached_page *)-1) {
-    return -1;
+    return 0;
   }
   if (!holdingsleep(&page->lock))
     panic("pagecache copy page");

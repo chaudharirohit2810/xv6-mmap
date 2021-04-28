@@ -209,6 +209,9 @@ static int map_pagecache_page_util(struct proc *p, struct file *f,
     // Get the page from page cache
     int curroff = offset % PGSIZE;
     int currsize = PGSIZE - curroff > tempsize ? tempsize : PGSIZE - curroff;
+		if(curroff > f->ip->size) {
+			 break;			
+		}
     int a = copyPage(f->ip, offset + PGSIZE * i, f->ip->inum, f->ip->dev,
                      temp + size - tempsize, currsize, curroff);
     if (a == -1)

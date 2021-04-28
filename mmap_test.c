@@ -37,6 +37,7 @@ void file_intermediate_given_addr_test();
 // File Mapping with user provided address that cannot fit between two existing
 // mappings
 void file_intermediate_given_addr_not_possible_test();
+void file_exceeds_file_size_test();
 
 // Anonymous tests (14 tests)
 void anon_private_test();           // private anonymous mapping test
@@ -45,7 +46,6 @@ void anon_private_fork_test();      // Private anonymous mapping with fork test
 void anon_shared_multi_fork_test(); // Shared mapping with multiple forks test
 void anon_exceed_size_test();       // Mapping exceeds KERNBASE due to size test
 void anon_exceed_count_test(); // Mapping count exceeds 30 (mmap array limit)
-                               // test
 void anon_missing_flags_test();
 // Private & Shared anonymous mapping together with fork test Invalid flags to
 // mmap test
@@ -92,6 +92,7 @@ void file_tests() {
   file_overlap_given_addr_test();
   file_intermediate_given_addr_test();
   file_intermediate_given_addr_not_possible_test();
+  file_exceeds_file_size_test();
 }
 
 void anonymous_tests(void) {
@@ -419,6 +420,41 @@ void file_mapping_with_offset_test() {
   }
   close(fd);
   printf(1, "file backed mapping with offset test ok\n");
+}
+
+// file backed mapping when mapping size exceeds total file size
+void file_exceeds_file_size_test() {
+  printf(1, "File exceed file size test\n");
+  // README file size 2286 bytes but we are mapping 8000 bytes and then writing
+  // upto 8000 bytes in it
+  int fd = open("README", O_RDWR);
+  if (fd == -1) {
+    printf(1, "File exceed file size test failed\n");
+    exit();
+  }
+  char buf[3000];
+  int n = read(fd, buf, 2286);
+  if (n != 2286) {
+    printf(1, "File exceed file size test failed\n");
+    exit();
+  }
+  int size = 8000;
+  char *ret =
+      (char *)mmap((void *)0, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+  if (ret == (void *)-1) {
+    printf(1, "File exceed file size test failed\n");
+    exit();
+  }
+  if (my_strcmp(ret, buf, 2286) != 0) {
+    printf(1, "File exceed file size test failed\n");
+    exit();
+  }
+  int res = munmap(ret, size);
+  if (res == -1) {
+    printf(1, "File exceed file size test failed\n");
+    exit();
+  }
+  printf(1, "File exceed file size test ok\n");
 }
 
 // Shared file backed mapping test
@@ -1412,3 +1448,4 @@ void mmap_invalid_map_fixed_test() {
   munmap(ret3, 200);
   printf(1, "mmap invalid address map fixed flag test ok\n");
 }
+
