@@ -296,6 +296,9 @@ void *my_mmap(int addr, struct file *f, int size, int offset, int flags,
     // Mappings count exceeds
     return (void *)-1;
   }
+	if(!f->readable) {
+		return (void*)-1;
+	}
   // When the mapping is shared and write permission is provided but opened file
   // is not opened in write mode
   if ((flags & MAP_SHARED) && (protection & PROT_WRITE) && !f->writable) {

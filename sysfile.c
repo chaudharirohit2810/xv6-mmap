@@ -462,6 +462,8 @@ int sys_mmap(void) {
   // File descriptor arguement
   if (argfd(4, &fd, &f) < 0) {
     if (!(flags & MAP_ANON)) {
+			struct proc* p = myproc();
+			
       return -1;
     }
   }

@@ -132,6 +132,7 @@ int main(int args, char *argv[]) {
 }
 
 // <!!-------- File Backed mapping ---------- !!>
+
 // When invalid fd is provided to mapping
 void file_invalid_fd_test() {
   printf(1, "file backed mapping invalid file descriptor test\n");
@@ -170,7 +171,7 @@ void file_invalid_flags_test() {
   exit();
 }
 
-// When file has only read only permission but mapping is shared with Write
+// When file is opened in read only mode but mapping is shared with Write
 // permission
 void file_writeable_shared_mapping_on_ro_file_test() {
   printf(1, "file backed writeable shared mapping on read only file test\n");
@@ -210,7 +211,6 @@ void file_ro_shared_mapping_on_ro_file_test() {
         "file backed read only shared mapping on read only file test failed\n");
     exit();
   }
-  printf(1, "file backed read only shared mapping on read only file test ok\n");
   int res = munmap(ret, 200);
   if (res == -1) {
     printf(
@@ -218,6 +218,7 @@ void file_ro_shared_mapping_on_ro_file_test() {
         "file backed read only shared mapping on read only file test failed\n");
     exit();
   }
+  printf(1, "file backed read only shared mapping on read only file test ok\n");
   close(fd);
 }
 
@@ -831,6 +832,7 @@ void file_intermediate_given_addr_not_possible_test() {
 }
 
 // <!! ----------- Anonymous mappings test ---------------------- !!>
+
 // Missing flags Test: Missing MAP_PRIVATE or MAP_SHARED in flags
 void anon_missing_flags_test(void) {
   printf(1, "anonymous missing flags test\n");
