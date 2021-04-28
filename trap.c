@@ -46,8 +46,11 @@ void handle_page_fault(struct trapframe *tf) {
         myproc()->killed = 1;
         return;
       }
-      int size = PGSIZE > p->mmaps[i].size - p->mmaps[i].stored_size ? p->mmaps[i].size - p->mmaps[i].stored_size : PGSIZE;
-      if (mmap_store_data(p, PGROUNDDOWN(page_fault_addr), size, p->mmaps[i].flags, p->mmaps[i].protection, p->mmaps[i].f, p->mmaps[i].offset) < 0) {
+      uint remsize = p->mmaps[i].size - p->mmaps[i].stored_size;
+      int size = PGSIZE > remsize ? remsize : PGSIZE;
+      if (mmap_store_data(p, PGROUNDDOWN(page_fault_addr), size,
+                          p->mmaps[i].flags, p->mmaps[i].protection,
+                          p->mmaps[i].f, p->mmaps[i].offset) < 0) {
         myproc()->killed = 1;
       }
       p->mmaps[i].stored_size += PGSIZE;
