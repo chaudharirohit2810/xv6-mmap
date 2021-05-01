@@ -50,7 +50,7 @@ void handle_page_fault(struct trapframe *tf) {
       int size = PGSIZE > remsize ? remsize : PGSIZE;
       if (mmap_store_data(p, PGROUNDDOWN(page_fault_addr), size,
                           p->mmaps[i].flags, p->mmaps[i].protection,
-                          p->mmaps[i].f, p->mmaps[i].offset) < 0) {
+                          p->mmaps[i].f, p->mmaps[i].offset + PGROUNDDOWN(page_fault_addr) - p->mmaps[i].virt_addr) < 0) {
         myproc()->killed = 1;
       }
       p->mmaps[i].stored_size += PGSIZE;

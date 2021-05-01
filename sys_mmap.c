@@ -209,6 +209,9 @@ static int map_pagecache_page_util(struct proc *p, struct file *f,
     // Get the page from page cache
     int curroff = offset % PGSIZE;
     int currsize = PGSIZE - curroff > tempsize ? tempsize : PGSIZE - curroff;
+    if (curroff > f->ip->size) {
+      break;
+    }
     int a = copyPage(f->ip, offset + PGSIZE * i, f->ip->inum, f->ip->dev,
                      temp + size - tempsize, currsize, curroff);
     if (a == -1)
@@ -291,14 +294,21 @@ void *my_mmap(int addr, struct file *f, int size, int offset, int flags,
     // Invalid arguements
     return (void *)-1;
   }
-  struct proc *p = myproc();
-  if (p->total_mmaps == 30) {
-    // Mappings count exceeds
+  // When size provided is less or equal to zero and offset is less than zero
+  if (size <= 0 || offset < 0) {
     return (void *)-1;
   }
-  // When the mapping is shared and write permission is provided but opened file
-  // is not opened in write mode
+  // File mapping without read permission on file
+  if (!(flags & MAP_ANONYMOUS) && !f->readable) {
+    return (void *)-1;
+  }
+  // Read write shared mapping on file opened in read only mode
   if ((flags & MAP_SHARED) && (protection & PROT_WRITE) && !f->writable) {
+    return (void *)-1;
+  }
+	struct proc *p = myproc();
+  if (p->total_mmaps == 30) {
+    // Mappings count exceeds
     return (void *)-1;
   }
   int i = -1;
