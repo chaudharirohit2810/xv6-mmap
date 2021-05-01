@@ -4,7 +4,7 @@
 #include "mmap.h"
 char *filename = "PASSWD";
 
-// File backend mappings test (18 tests)
+// File backend mappings test (21 tests)
 void file_private_test();
 void file_shared_test();
 void file_invalid_fd_test();
@@ -13,6 +13,7 @@ void file_writeable_shared_mapping_on_ro_file_test();
 void file_ro_shared_mapping_on_ro_file_test();
 void file_exceed_size_test();
 void file_exceed_count_test();
+void file_empty_file_size_test();
 void file_private_mapping_perm_test();
 void file_pagecache_coherency_test();
 void file_private_with_fork_test();
@@ -26,7 +27,7 @@ void file_intermediate_given_addr_not_possible_test();
 void file_exceeds_file_size_test();
 void file_mapping_on_wo_file_test();
 
-// Anonymous tests (14 tests)
+// Anonymous tests (15 tests)
 void anon_private_test();
 void anon_shared_test();
 void anon_private_fork_test();
@@ -43,7 +44,7 @@ void anon_intermediate_given_addr_test();
 void anon_intermediate_given_addr_not_possible_test();
 void anon_write_on_ro_mapping_test();
 
-// Other Mmap tests
+// Other Mmap tests (5 Tests)
 void munmap_partial_size_test();
 void mmap_write_on_ro_mapping_test();
 void mmap_none_permission_test();
@@ -58,6 +59,7 @@ void file_tests() {
   file_private_mapping_perm_test();
   file_exceed_size_test();
   file_exceed_count_test();
+  file_empty_file_size_test();
   file_private_test();
   file_shared_test();
   file_pagecache_coherency_test();
@@ -70,7 +72,7 @@ void file_tests() {
   file_intermediate_given_addr_test();
   file_intermediate_given_addr_not_possible_test();
   file_exceeds_file_size_test();
-	file_mapping_on_wo_file_test();
+  file_mapping_on_wo_file_test();
 }
 
 void anonymous_tests() {
@@ -82,7 +84,7 @@ void anonymous_tests() {
   anon_missing_flags_test();
   anon_exceed_count_test();
   anon_exceed_size_test();
-	anon_zero_size_test();
+  anon_zero_size_test();
   anon_given_addr_test();
   anon_invalid_addr_test();
   anon_overlap_given_addr_test();
@@ -98,11 +100,10 @@ void other_tests() {
   mmap_invalid_map_fixed_test();
 }
 
-
 int main(int args, char *argv[]) {
   file_tests();
   anonymous_tests();
-	other_tests();
+  other_tests();
   exit();
 }
 
@@ -464,6 +465,51 @@ void file_mapping_with_offset_test() {
   printf(1, "file backed mapping with offset test ok\n");
 }
 
+// mmap when empty file is provided as arguement
+void file_empty_file_size_test() {
+  printf(1, "file mmap on empty file test\n");
+  int fd = open("file1", O_CREATE | O_RDWR);
+  if (fd == -1) {
+    printf(1, "file mmap on empty file test failed: at open\n");
+    exit();
+  }
+  char *ret =
+      (char *)mmap((void *)0, 200, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+  if (ret == (void *)-1) {
+    printf(1, "file mmap on empty file test failed: at mmap\n");
+    exit();
+  }
+  for (int i = 0; i < 200; i++) {
+    ret[i] = 'a';
+  }
+  int res = munmap(ret, 200);
+  if (res == -1) {
+    printf(1, "file mmap on empty file test failed\n");
+    exit();
+  }
+  close(fd);
+  // Check if data is correctly written into the file
+  fd = open("file1", O_CREATE | O_RDWR);
+  if (fd == -1) {
+    printf(1, "file mmap on empty file test failed: at open\n");
+    exit();
+  }
+  char buf[200];
+  int n = read(fd, buf, 200);
+  if (n != 200) {
+    printf(1, "file mmap on empty file test failed: at read\n");
+    exit();
+  }
+  for (int i = 0; i < 200; i++) {
+    if (buf[i] != 'a') {
+      printf(1, "file mmap on empty file test failed: at buf\n");
+      exit();
+    }
+  }
+  printf(1, "file mmap on empty file test ok\n");
+  close(fd);
+}
+
 // file backed mapping when mapping size exceeds total file size
 void file_exceeds_file_size_test() {
   printf(1, "File exceed file size test\n");
@@ -499,23 +545,23 @@ void file_exceeds_file_size_test() {
   printf(1, "File exceed file size test ok\n");
 }
 
-// Trying to map using writeonly file 
+// Trying to map using writeonly file
 void file_mapping_on_wo_file_test() {
   printf(1, "file mapping on write only file\n");
   int fd = open(filename, O_WRONLY);
   if (fd == -1) {
-  	printf(1, "file mapping on write only file failed\n");
+    printf(1, "file mapping on write only file failed\n");
     exit();
   }
   int size = 2000;
   char *ret =
       (char *)mmap((void *)0, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
   if (ret == (void *)-1) {
-  	printf(1, "file mapping on write only file ok\n");
-		return;
+    printf(1, "file mapping on write only file ok\n");
+    return;
   }
   printf(1, "file mapping on write only file failed\n");
-	exit();
+  exit();
 }
 
 // Check if pagecache is updated after write to file
@@ -906,7 +952,7 @@ void anon_zero_size_test(void) {
   char *ret = (char *)mmap((void *)0, 0, PROT_READ | PROT_WRITE,
                            MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
   if (ret != (void *)-1) {
-  	printf(1, "anonymous zero size mapping test failed\n");
+    printf(1, "anonymous zero size mapping test failed\n");
     exit();
   }
   printf(1, "anonymous zero size mapping test ok\n");
@@ -1465,4 +1511,3 @@ void mmap_invalid_map_fixed_test() {
   munmap(ret3, 200);
   printf(1, "mmap invalid address map fixed flag test ok\n");
 }
-
