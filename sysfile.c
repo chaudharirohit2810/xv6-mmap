@@ -15,6 +15,7 @@
 #include "sleeplock.h"
 #include "file.h"
 #include "fcntl.h"
+#include "x86.h"
 #include "mmap.h"
 
 // Fetch the nth word-sized system call argument as a file descriptor
@@ -28,7 +29,7 @@ argfd(int n, int *pfd, struct file **pf)
   if(argint(n, &fd) < 0)
     return -1;
   if(fd < 0 || fd >= NOFILE || (f=myproc()->ofile[fd]) == 0)
-    return -1;
+		return -1;
   if(pfd)
     *pfd = fd;
   if(pf)
@@ -446,26 +447,29 @@ sys_pipe(void)
 
 // implementation of mmap system call
 int sys_mmap(void) {
-  // <!!------------------------- Arguements of system call -----------------------!!>
   int addr, size, protection, flags, offset;
   int fd;
   struct file *f;
-  // <!!----------------------------Getting the arguements-------------------------!!>
   // Integer arguements
-  if (argint(1, &size) < 0 || argint(2, &protection) < 0 || argint(3, &flags) < 0 || argint(5, &offset) < 0) {
+  if (argint(1, &size) < 0 || argint(2, &protection) < 0 ||
+      argint(3, &flags) < 0 || argint(5, &offset) < 0) {
     return -1;
   }
   // address arguement
   if (argint(0, &addr) < 0) {
     return -1;
   }
+  int val = argfd(4, &fd, &f);
   // File descriptor arguement
-  if (argfd(4, &fd, &f) < 0) {
+  if (val < 0) {
     if (!(flags & MAP_ANON)) {
 			struct proc* p = myproc();
 			
       return -1;
     }
+  } else {
+    // Duplicate the file so it will work even when the descriptor is closed
+    filedup(f);
   }
   return (int)my_mmap(addr, f, size, offset, flags, protection);
 }
@@ -473,10 +477,9 @@ int sys_mmap(void) {
 // munmap system call
 int sys_munmap(void) {
   int addr, size;
-  // <!!---------------------------------------Getting the arguements-------------------------------!!>
   if (argint(0, &addr) < 0 || argint(1, &size)) {
     return -1;
   }
   struct proc *p = myproc();
-	return my_munmap(p, addr, size);
+  return my_munmap(p, addr, size);
 }
