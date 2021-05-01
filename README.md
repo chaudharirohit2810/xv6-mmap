@@ -12,12 +12,14 @@ The starting address for the new mapping is specified in addr and the length arg
 - Lazy mappings:
   - Page is mapped only when it is needed, this helps in optimal utilization of physical memory
 - Private memory mapping (MAP_PRIVATE):
-  - Creates in private mapping
+  - Creates a private mapping
   - Updates to mapping are not visible to child processes
-- Shared memory mapping (MAP_SHARED): - Mapping is shared between multiple processes
+- Shared memory mapping (MAP_SHARED): 
+	- Mapping is shared between multiple processes
   - Updated to mapping are visible to child processes sharing the same mapping
 - File Backed memory mapping:
   - Mapping is backed by file
+	- Pagecache is used to store the file contents which helps in effective retrieval of file data
 - Anonymous memory mapping (MAP_ANONYMOUS):
   - Mapping is not backed by file and contents are initialized to 0
 - Fixed address memory mapping (MAP_FIXED):
