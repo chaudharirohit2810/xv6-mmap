@@ -13,6 +13,7 @@
 #include "mmap.h"
 
 // <!! ---------------- Mmap Utils -------------------- !!>
+
 // whole mmap region structure
 void zero_mmap_region_struct(struct mmap_region *mr) {
   mr->virt_addr = 0;
@@ -125,18 +126,17 @@ int copy_maps(struct proc *parent, struct proc *child) {
   return 0;
 }
 
+// Right shift the array and add the mappings at i + 1 index
 int setup_mmap_arr(struct proc *p, int size, int i, uint mmapaddr) {
   int j = p->total_mmaps;
   while (j > i + 1) {
     copy_mmap_struct(&p->mmaps[j], &p->mmaps[j - 1]);
     j--;
   }
-  // Check if the mmapaddr is greater than KERNBASE
   if (PGROUNDUP(mmapaddr + size) >= KERNBASE) {
     // Address Exceeds KERNBASE
     return -1;
   }
-  // Store the virtual_address in mapping
   p->mmaps[i + 1].virt_addr = mmapaddr;
   p->mmaps[i + 1].size = size;
   return i + 1; // Return the index of mmap mapping
@@ -174,8 +174,14 @@ int find_mmap_addr(struct proc *p, int size) {
     p->mmaps[0].size = size;
     return 0; // Return the index in mmap region array
   }
-  // Find the map address
   int i = 0;
+  uint mmapaddr;
+  // If mapping is possible between MMAPBASE & first mapping
+  if (p->mmaps[0].virt_addr - MMAPBASE > size) {
+    mmapaddr = MMAPBASE;
+    return setup_mmap_arr(p, size, -1, mmapaddr);
+  }
+  // Find the map address
   while (i < p->total_mmaps && p->mmaps[i + 1].virt_addr != 0) {
     uint start_addr = PGROUNDUP(p->mmaps[i].virt_addr + p->mmaps[i].size);
     uint end_addr = PGROUNDUP(p->mmaps[i + 1].virt_addr);
@@ -184,10 +190,11 @@ int find_mmap_addr(struct proc *p, int size) {
     }
     i += 1;
   }
-  uint mmapaddr = PGROUNDUP(p->mmaps[i].virt_addr + p->mmaps[i].size);
+  mmapaddr = PGROUNDUP(p->mmaps[i].virt_addr + p->mmaps[i].size);
   if (mmapaddr + size > KERNBASE) {
     return -1;
   }
+  // Right shift the mappings to arrange in increasing order
   return setup_mmap_arr(p, size, i, mmapaddr);
 }
 
@@ -302,15 +309,15 @@ void *my_mmap(int addr, struct file *f, int size, int offset, int flags,
   if (!(flags & MAP_ANONYMOUS) && !f->readable) {
     return (void *)-1;
   }
-	if(!f->readable) {
-		return (void*)-1;
-	}
+  if (!f->readable) {
+    return (void *)-1;
+  }
   // When the mapping is shared and write permission is provided but opened file
   // is not opened in write mode
   if ((flags & MAP_SHARED) && (protection & PROT_WRITE) && !f->writable) {
     return (void *)-1;
   }
-	struct proc *p = myproc();
+  struct proc *p = myproc();
   if (p->total_mmaps == 30) {
     // Mappings count exceeds
     return (void *)-1;
