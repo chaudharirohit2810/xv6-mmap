@@ -1,4 +1,4 @@
-rOTE: we have stopped maintaining the x86 version of xv6, and switched
+NOTE: we have stopped maintaining the x86 version of xv6, and switched
 our efforts to the RISC-V version
 (https://github.com/mit-pdos/xv6-riscv.git)
 

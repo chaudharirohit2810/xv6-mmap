@@ -108,7 +108,7 @@ trap(struct trapframe *tf)
     lapiceoi();
     break;
   case 14: // Page fault caused by mmap
-    if (rcr2() >= MMAPBASE) {
+    if (rcr2() >= MMAPBASE && rcr2() < KERNBASE) {
       handle_page_fault(tf);
       break;
     }
