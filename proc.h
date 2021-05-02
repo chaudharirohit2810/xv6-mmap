@@ -41,7 +41,6 @@ struct mmap_region {
   int offset;        // File offset if mapping is not anonymous
   int ref_count;     // 1 if the mapping is shared and process is child
   int stored_size;   // If any page is mapped corresponding to this address
-  int unmapped_size; // Total unmapped size
 };
 
 enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };

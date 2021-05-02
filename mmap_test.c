@@ -1426,7 +1426,7 @@ void munmap_partial_size_test() {
   for (int i = 1024; i < size / 4; i++) {
     ret[i] = i * 2;
   }
-  res = munmap((void *)ret, size);
+  res = munmap((void *)ret + 4096, size);
   if (res == -1) {
     printf(1, "munmap only partial size test failed\n");
     exit();

@@ -398,7 +398,8 @@ int my_munmap(struct proc *p, int addr, int size) {
   }
   // Free the allocated page
   int currsize = 0;
-  for (; currsize < unmapping_size; currsize += PGSIZE) {
+  int main_map_size = unmapping_size > total_size ? total_size: unmapping_size;
+  for (; currsize < main_map_size; currsize += PGSIZE) {
     uint tempaddr = addr + currsize;
     uint pa = get_physical_page(p, tempaddr, &pte);
     if (pa == 0) {
@@ -418,7 +419,7 @@ int my_munmap(struct proc *p, int addr, int size) {
     }
     p->total_mmaps -= 1;
   } else {
-    p->mmaps[i].unmapped_size += unmapping_size;
+    p->mmaps[i].virt_addr += unmapping_size;
     p->mmaps[i].size -= unmapping_size;
   }
   return 0;
