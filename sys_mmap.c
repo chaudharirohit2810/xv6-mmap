@@ -399,12 +399,11 @@ int my_munmap(struct proc *p, int addr, int size) {
   // Free the allocated page
   int currsize = 0;
   for (; currsize < unmapping_size; currsize += PGSIZE) {
-    uint tempaddr = addr + currsize + p->mmaps[i].unmapped_size;
+    uint tempaddr = addr + currsize;
     uint pa = get_physical_page(p, tempaddr, &pte);
     if (pa == 0) {
       // Page was not mapped yet
-      // Left shift the mmap array
-      break;
+      continue;
     }
     char *v = P2V(pa);
     kfree(v);
