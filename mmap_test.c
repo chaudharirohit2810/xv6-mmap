@@ -2,7 +2,7 @@
 #include "user.h"
 #include "fcntl.h"
 #include "mmap.h"
-char *filename = "PASSWD";
+char *filename = "README";
 
 // File backend mappings test (21 tests)
 void file_private_test();
