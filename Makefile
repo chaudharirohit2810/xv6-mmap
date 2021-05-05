@@ -286,6 +286,6 @@ tar:
 	(cd /tmp; tar cf - xv6) | gzip >xv6-rev10.tar.gz  # the next one will be 10 (9/17)
 
 run: 
-	make clean && echo "./mmap_test" | make qemu
+	make clean && echo " ./mmap_test" | make qemu
 
 .PHONY: dist-test dist
