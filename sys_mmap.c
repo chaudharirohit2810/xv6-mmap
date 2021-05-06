@@ -57,9 +57,6 @@ uint get_physical_page(struct proc *p, uint tempaddr, pte_t **pte) {
     return 0;
   }
   uint pa = PTE_ADDR(**pte);
-  if (pa == 0) {
-    return 0;
-  }
   return pa;
 }
 
